@@ -72,7 +72,10 @@ export default class NaturalBusScene extends BaseScene {
 
     this.world.addDust(14, new Phaser.Geom.Rectangle(0, h * 0.4, ww, h * 0.5), 0x8f9fc9, 0.12);
 
-    this.companion = new Companion(this, ww * 0.78, h * 0.5);
+    // He is seated on the same bench, not up against the window-wall. The old
+    // y-position put his offered hand above the walkable aisle, so the player
+    // could sit down but could never physically reach the hand target.
+    this.companion = new Companion(this, ww * 0.78, h * 0.62);
     this.companion.setState("seated");
     this.companion.soul.setWarmth(0.45);
 
@@ -115,7 +118,7 @@ export default class NaturalBusScene extends BaseScene {
 
     // the crowd hushes; this is a familiar quiet now
     this.audio.duckBed("crowd", 0.014, 2.4);
-    this.rig.focusPull((this.p.pos.x + this.companion.x) / 2, this.p.pos.y - 12, 1.14, 1400);
+    this.rig.focusPull((this.p.pos.x + this.companion.x) / 2, this.p.pos.y - 4, 1.12, 1400);
     this.p.soul.setWarmth(0.6);
     this.companion.soul.setIntensity(1.35);
 
@@ -131,8 +134,10 @@ export default class NaturalBusScene extends BaseScene {
   private createHands() {
     if (this.hands) return;
     this.hands = new HandHoldController(this, this.ui, this.audio, {
-      contactDistance: 34,
+      contactDistance: 42,
       prompt: "hold his hand",
+      her: this.player!.soul,
+      him: this.companion.soul,
     });
     this.hands.onContact(() => void this.contact());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.hands.destroy());
