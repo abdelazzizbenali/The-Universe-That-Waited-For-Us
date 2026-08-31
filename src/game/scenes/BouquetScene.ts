@@ -276,7 +276,7 @@ export default class BouquetScene extends BaseScene {
     this.ui.letterbox(false);
     this.uiLocked = false;
     this.hands.fadeOut(1000);
-    this.cameras.main.zoomTo(1, 1200, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom, 1200, "Sine.easeInOut");
     await new Promise((r) => this.time.delayedCall(1300, r));
     await flashConstellation(this, this.saves.state.memories, MEMORY_IDS.bouquet, 4200);
     this.transitionTo("BorrowedLaptopScene");

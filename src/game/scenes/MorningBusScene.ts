@@ -10,6 +10,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { rect } from "../systems/world/colliders";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addNpcLine, addStudentNpc } from "../art/NpcArt";
 
 export default class MorningBusScene extends BaseScene {
   private her!: Companion;
@@ -55,6 +56,17 @@ export default class MorningBusScene extends BaseScene {
       this.colliders.push(rect(sx + 60, seatY + h * 0.07, 128, h * 0.16));
     }
 
+    seatXs.forEach((sx, i) => addBusBench(this, sx + 62, seatY + h * 0.17, 178, i === 3 ? 1 : 0.78));
+    addNpcLine(
+      this,
+      [
+        { x: seatXs[1] + 46, y: seatY + h * 0.16, height: 58, alpha: 0.72 },
+        { x: seatXs[2] + 52, y: seatY + h * 0.17, height: 62, alpha: 0.72, flipX: true },
+        { x: seatXs[4] + 54, y: seatY + h * 0.17, height: 60, alpha: 0.66 },
+      ],
+      3
+    );
+
     // her — sitting alone, near the back
     const herSeat = seatXs[3];
     this.her = new Companion(this, herSeat + 34, seatY + h * 0.06, "hazel");
@@ -73,11 +85,14 @@ export default class MorningBusScene extends BaseScene {
     this.audio.playBed("bus-engine");
 
     // the stranger who will take the seat if he does not
+    const strangerArt = addStudentNpc(this, "boy-4", 0, 0, 72, 1, true);
     const sBody = this.add.graphics();
-    sBody.fillStyle(0x1c2652, 1);
-    sBody.fillEllipse(0, 0, 30, 48);
-    sBody.fillCircle(0, -29, 10);
-    this.stranger = this.add.container(ww * 0.06, seatY + h * 0.26, [sBody]).setDepth(DEPTH.world).setAlpha(0);
+    if (!strangerArt) {
+      sBody.fillStyle(0x1c2652, 1);
+      sBody.fillEllipse(0, 0, 30, 48);
+      sBody.fillCircle(0, -29, 10);
+    }
+    this.stranger = this.add.container(ww * 0.06, seatY + h * 0.26, strangerArt ? [strangerArt] : [sBody]).setDepth(DEPTH.world).setAlpha(0);
 
     void this.openBeat(herSeat, seatY, h);
   }

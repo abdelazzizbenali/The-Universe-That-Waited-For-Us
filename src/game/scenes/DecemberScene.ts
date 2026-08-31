@@ -151,7 +151,7 @@ export default class DecemberScene extends BaseScene {
 
     // the sky records it — zoom returns to 1 so the map reads true to scale
     this.ui.letterbox(false);
-    this.cameras.main.zoomTo(1, 1100, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom, 1100, "Sine.easeInOut");
     await new Promise((r) => this.time.delayedCall(1200, r));
     await flashConstellation(this, this.saves.state.memories, MEMORY_IDS.december, 4200);
 

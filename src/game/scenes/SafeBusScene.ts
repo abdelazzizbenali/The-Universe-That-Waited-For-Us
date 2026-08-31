@@ -10,9 +10,10 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { SafeRadius } from "../systems/companion/SafeRadius";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addStudentNpc, type NpcArtKey } from "../art/NpcArt";
 
 interface Passenger {
-  c: Phaser.GameObjects.Container;
+  c: Phaser.GameObjects.Container | Phaser.GameObjects.Image;
   home: Phaser.Math.Vector2;
   phase: number;
 }
@@ -56,20 +57,22 @@ export default class SafeBusScene extends BaseScene {
     g.fillStyle(0x1b2551, 1);
     g.fillRect(0, h * 0.44, ww, 5);
 
-    // a full bus of people, breathing and shifting
+    // a full bus of people, breathing and shifting, using the provided NPC art.
+    const npcKeys: NpcArtKey[] = ["boy-1", "girl-1", "boy-2", "girl-2", "boy-3", "girl-3", "boy-4", "girl-4"];
     for (let i = 0; i < 26; i++) {
       const x = ww * 0.1 + Math.random() * ww * 0.82;
       const y = h * (0.56 + Math.random() * 0.3);
-      const body = this.add.graphics();
-      const shade = [0x18214a, 0x1c2652, 0x141c3e][i % 3];
-      body.fillStyle(shade, 1);
-      body.fillEllipse(0, 0, 28, 46);
-      body.fillCircle(0, -28, 10);
-      const c = this.add.container(x, y, [body]).setDepth(DEPTH.world);
+      const c =
+        addStudentNpc(this, npcKeys[i % npcKeys.length], x, y, 60 + (i % 4) * 5, 0.76, i % 2 === 0) ??
+        this.add.container(x, y).setDepth(DEPTH.world);
       this.passengers.push({ c, home: new Phaser.Math.Vector2(x, y), phase: Math.random() * 6 });
     }
 
     this.world.addDust(14, new Phaser.Geom.Rectangle(0, h * 0.35, ww, h * 0.5), 0x8f9fc9, 0.12);
+
+    // Side benches from the provided art ground the crowded bus interior.
+    addBusBench(this, ww * 0.24, h * 0.67, 170, 0.85);
+    addBusBench(this, ww * 0.66, h * 0.67, 170, 0.75);
 
     // him — he holds his ground between her and the crowd, so the shelter is
     // a place she chooses to stay in, not something that trails her

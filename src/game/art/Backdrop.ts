@@ -1,53 +1,86 @@
-/* Backdrop — painted environment art as the base layer of every scene.
+/* Backdrop — painted environment art as an actual world-space layer.
 
-   These are real painted backgrounds, not procedural fills. Each one is
-   fitted to the viewport with "cover" maths (never stretched out of ratio,
-   never letterboxed), pinned to the camera, and graded per scene so a single
-   painting can carry several emotional states — the same library can be
-   cold on the first visit and warm on the fourth.
-
-   Scene geometry, props and characters draw on top; the painting supplies
-   the depth, light and place that primitives cannot. */
+   The art is fitted to each scene's authored playable rectangle. That keeps
+   backgrounds from appearing giant, prevents camera black/blue edges, and makes
+   collision/interactable coordinates line up with what the player sees. */
 import Phaser from "phaser";
 
 export interface BackdropMood {
-  /** Multiply tint — cools or warms the painting. */
   tint?: number;
-  /** 0..1 darkening veil over the art. */
   darken?: number;
-  /** 0..1 additive colour wash (used for OUR COLOR late game). */
   wash?: number;
   washTint?: number;
-  /** Slow drift, in pixels, for a sense of breath. Ignored in reduced motion. */
   drift?: number;
-  /** Extra zoom past cover fit, for a touch of parallax headroom. */
   zoom?: number;
 }
 
 const BACKDROP_DEPTH = -1000;
 
+/**
+ * Most scenes author their world width as a multiple of the current viewport.
+ * The backdrop has to exist before build() runs, so it mirrors those known
+ * dimensions here. This keeps camera bounds from clipping buses, campus walks,
+ * the cosmic world, the final world, and free exploration, while still never
+ * showing outside the painted image.
+ */
+const SCENE_WIDTH_SCALE: Record<string, number> = {
+  BorrowedLaptopScene: 1.25,
+  BottleScene: 1.25,
+  BouquetScene: 1.4,
+  BusChangesScene: 1.9,
+  CallScene: 1.7,
+  CameraScene: 1.8,
+  ColorHuntScene: 2,
+  CommitmentScene: 2.3,
+  ConstantineScene: 2.2,
+  CrowdedBusScene: 1.7,
+  EveningWalkScene: 2.5,
+  ExamLibraryScene: 1.6,
+  FinaleScene: 6.2,
+  FreeExploreScene: 5,
+  HandHoldScene: 1.3,
+  HolidayHubScene: 1.7,
+  LastThreeDaysScene: 1.5,
+  LibraryScene: 1.7,
+  MorningBusScene: 1.45,
+  MutualCareScene: 1.6,
+  NaturalBusScene: 1.6,
+  ProjectScene: 1.5,
+  ReportScene: 1.5,
+  SafeBusScene: 1.35,
+  SchoolBusScene: 1.55,
+  TaxiScene: 2.2,
+  VideoBusScene: 1.3,
+  VisionScene: 2.4,
+  WatchingScene: 2.6,
+  YellowLightScene: 1.9,
+};
+
 export class Backdrop {
   private img: Phaser.GameObjects.Image;
   private veil: Phaser.GameObjects.Rectangle;
   private wash: Phaser.GameObjects.Rectangle | null = null;
-  private baseZoom: number;
-  private drift: number;
-  private t = 0;
+  readonly width: number;
+  readonly height: number;
 
   constructor(
     private scene: Phaser.Scene,
     key: string,
     mood: BackdropMood = {},
-    reduced = false
+    _reduced = false
   ) {
-    const { tint, darken = 0, wash = 0, washTint = 0x93dcbb, drift = 0, zoom = 1.06 } = mood;
-    this.baseZoom = zoom;
-    this.drift = reduced ? 0 : drift;
+    const { tint, darken = 0, wash = 0, washTint = 0x93dcbb } = mood;
+    const viewportW = scene.scale.width || 960;
+    const viewportH = scene.scale.height || 540;
+    const desiredW = viewportW * (SCENE_WIDTH_SCALE[scene.scene.key] ?? 1);
+    this.width = desiredW;
+    this.height = viewportH;
 
     this.img = scene.add
       .image(0, 0, key)
-      .setOrigin(0.5)
-      .setScrollFactor(0)
+      .setOrigin(0, 0)
+      .setScrollFactor(1)
+      .setDisplaySize(this.width, this.height)
       .setDepth(BACKDROP_DEPTH);
     if (tint !== undefined) this.img.setTint(tint);
 
@@ -66,58 +99,28 @@ export class Backdrop {
         .setBlendMode(Phaser.BlendModes.ADD);
     }
 
-    this.fit();
-    scene.scale.on(Phaser.Scale.Events.RESIZE, this.fit, this);
+    this.fitOverlay();
+    scene.scale.on(Phaser.Scale.Events.RESIZE, this.fitOverlay, this);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      scene.scale.off(Phaser.Scale.Events.RESIZE, this.fit, this);
+      scene.scale.off(Phaser.Scale.Events.RESIZE, this.fitOverlay, this);
     });
   }
 
-  /** Cover-fit: fills the viewport on both axes, preserving aspect ratio. */
-  private fit() {
+  private fitOverlay() {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
-    const src = this.scene.textures.get(this.img.texture.key).getSourceImage();
-    const sw = (src as HTMLImageElement).width || 1536;
-    const sh = (src as HTMLImageElement).height || 1024;
-    const scale = Math.max(w / sw, h / sh) * this.baseZoom;
-
-    this.img.setPosition(w / 2, h / 2).setScale(scale);
     this.veil.setPosition(w / 2, h / 2).setSize(w, h);
     this.wash?.setPosition(w / 2, h / 2).setSize(w, h);
   }
 
-  /** Slow living drift, plus a gentle response to camera movement. */
-  update(dtSec: number, cam?: Phaser.Cameras.Scene2D.Camera) {
-    const w = this.scene.scale.width;
-    const h = this.scene.scale.height;
-    let ox = 0;
-    let oy = 0;
-
-    if (this.drift > 0) {
-      this.t += dtSec;
-      ox += Math.sin(this.t * 0.06) * this.drift;
-      oy += Math.cos(this.t * 0.045) * this.drift * 0.4;
-    }
-    // the painting shifts a little as the camera travels: cheap parallax
-    // that never reveals an edge because the image over-covers the frame
-    if (cam) {
-      const span = Math.max(1, cam.getBounds().width - w);
-      const p = Phaser.Math.Clamp((cam.scrollX - cam.getBounds().x) / span, 0, 1);
-      ox += (0.5 - p) * w * 0.06;
-    }
-    this.img.setPosition(w / 2 + ox, h / 2 + oy);
+  update(_dtSec: number, _cam?: Phaser.Cameras.Scene2D.Camera) {
+    this.fitOverlay();
   }
 
-  /** Re-grade the painting live (used when a scene warms or wakes). */
   grade(mood: BackdropMood, ms = 2000) {
     if (mood.tint !== undefined) this.img.setTint(mood.tint);
-    if (mood.darken !== undefined) {
-      this.scene.tweens.add({ targets: this.veil, fillAlpha: mood.darken, duration: ms });
-    }
-    if (mood.wash !== undefined && this.wash) {
-      this.scene.tweens.add({ targets: this.wash, fillAlpha: mood.wash, duration: ms });
-    }
+    if (mood.darken !== undefined) this.scene.tweens.add({ targets: this.veil, fillAlpha: mood.darken, duration: ms });
+    if (mood.wash !== undefined && this.wash) this.scene.tweens.add({ targets: this.wash, fillAlpha: mood.wash, duration: ms });
   }
 
   destroy() {

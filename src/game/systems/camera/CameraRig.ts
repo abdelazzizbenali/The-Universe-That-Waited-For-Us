@@ -1,33 +1,37 @@
-/* CameraRig — smooth follow, focus-pulls for emotional beats, gentle
-   settles. No screenshake: this world never hits her.
-
-   Every movement respects reduced motion: pulls become gentler and zooms
-   shallower, but nothing is ever skipped or hidden. */
+/* CameraRig — smooth follow and emotional focus. The gameplay zoom is kept
+   close to 1:1 so the provided backgrounds, furniture, and playable areas read
+   at their intended proportions instead of feeling oversized. */
 import Phaser from "phaser";
 import { runtime } from "../../runtime";
 
 export class CameraRig {
   private cam: Phaser.Cameras.Scene2D.Camera;
   private followTarget: Phaser.GameObjects.Container | null = null;
-  private lerp = 0.085;
+  private lerp = 0.11;
+  private baseZoom = 1;
 
   constructor(private scene: Phaser.Scene) {
     this.cam = scene.cameras.main;
   }
 
-  /** Softens a zoom target toward 1 when reduced motion is on. */
-  private z(zoom: number) {
+  private gameplayZoom() {
+    return runtime.settings?.zoom ?? 1.08;
+  }
+
+  private z(relativeZoom: number) {
+    const target = this.gameplayZoom() * relativeZoom;
     const rm = runtime.settings?.reducedMotion;
-    return rm ? 1 + (zoom - 1) * 0.35 : zoom;
+    return rm ? this.gameplayZoom() + (target - this.gameplayZoom()) * 0.35 : target;
   }
 
   private d(ms: number) {
     return runtime.settings ? runtime.settings.duration(ms) : ms;
   }
 
-  follow(target: Phaser.GameObjects.Container, lerp = 0.085, zoom = 1) {
+  follow(target: Phaser.GameObjects.Container, lerp = 0.11, zoom = 1) {
     this.followTarget = target;
     this.lerp = lerp;
+    this.baseZoom = zoom;
     this.cam.startFollow(target, false, lerp, lerp);
     this.cam.setZoom(this.z(zoom));
   }
@@ -37,10 +41,12 @@ export class CameraRig {
   }
 
   setBounds(x: number, y: number, w: number, h: number) {
-    this.cam.setBounds(x, y, w, h);
+    const backdrop = (this.scene as Phaser.Scene & { backdrop?: { width: number; height: number } }).backdrop;
+    const bw = backdrop?.width ?? w;
+    const bh = backdrop?.height ?? h;
+    this.cam.setBounds(x, y, Math.max(1, Math.min(w, bw)), Math.max(1, Math.min(h, bh)), true);
   }
 
-  /** Emotional focus: drift to a point and breathe in. */
   focusPull(x: number, y: number, zoom = 1.14, dur = 1000) {
     const d = this.d(dur);
     this.cam.stopFollow();
@@ -48,16 +54,13 @@ export class CameraRig {
     this.cam.zoomTo(this.z(zoom), d, "Sine.easeInOut");
   }
 
-  /** Return to the player, softly. */
-  release(zoom = 1, dur = 1000) {
+  release(zoom = this.baseZoom, dur = 1000) {
     const d = this.d(dur);
     this.cam.zoomTo(this.z(zoom), d, "Sine.easeInOut");
     if (this.followTarget) {
       this.cam.pan(this.followTarget.x, this.followTarget.y, d, "Sine.easeInOut");
       this.scene.time.delayedCall(d + 30, () => {
-        if (this.followTarget && this.followTarget.active) {
-          this.cam.startFollow(this.followTarget, false, this.lerp, this.lerp);
-        }
+        if (this.followTarget && this.followTarget.active) this.cam.startFollow(this.followTarget, false, this.lerp, this.lerp);
       });
     }
   }

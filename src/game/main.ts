@@ -83,10 +83,13 @@ export function startGame(rootEl: HTMLElement): GameHandle {
   const settings = new Settings();
   initRuntime({ ui, audio, colors, saves, settings });
 
-  // volumes and mute apply live, without needing a restart
+  let gameRef: Phaser.Game | null = null;
+  // volumes, motion, and zoom apply live, without needing a restart
   settings.onChange((s) => {
     audio.setVolumes(settings.gain("music"), settings.gain("effects"), s.muted);
     setEnvironmentReduced(s.reducedMotion);
+    const current = gameRef?.scene.getScenes(true)[0];
+    current?.cameras?.main?.setZoom(settings.zoom);
   });
   ui.bindSettings(settings);
 
@@ -145,6 +148,8 @@ export function startGame(rootEl: HTMLElement): GameHandle {
       keyedScene("FreeExploreScene", FreeExploreScene),
     ],
   });
+
+  gameRef = game;
 
   return {
     game,

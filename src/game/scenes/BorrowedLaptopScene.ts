@@ -9,6 +9,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { HandHoldController } from "../systems/hands/HandHoldController";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addNpcLine } from "../art/NpcArt";
 
 export default class BorrowedLaptopScene extends BaseScene {
   private companion!: Companion;
@@ -40,8 +41,15 @@ export default class BorrowedLaptopScene extends BaseScene {
     }
     g.fillStyle(0x0e1638, 1);
     g.fillRect(0, h * 0.42, ww, h * 0.58);
-    g.fillStyle(0x1d2a58, 1);
-    g.fillRoundedRect(ww * 0.55, h * 0.46, 156, h * 0.16, 12);
+    addBusBench(this, ww * 0.64, h * 0.67, 198, 1);
+    addNpcLine(
+      this,
+      [
+        { x: ww * 0.2, y: h * 0.68, height: 58, alpha: 0.48 },
+        { x: ww * 0.38, y: h * 0.67, height: 60, alpha: 0.44, flipX: true },
+      ],
+      2
+    );
 
     this.world.addDust(12, new Phaser.Geom.Rectangle(0, h * 0.1, ww, h * 0.45), 0xdce9ff, 0.16);
 

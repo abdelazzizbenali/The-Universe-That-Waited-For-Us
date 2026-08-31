@@ -11,6 +11,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { circle } from "../systems/world/colliders";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addStudentNpc, type NpcArtKey } from "../art/NpcArt";
 
 interface Beat {
   id: string;
@@ -61,7 +62,7 @@ export default class BusChangesScene extends BaseScene {
   private traveling = true;
   private done = false;
   private skyG!: Phaser.GameObjects.Graphics;
-  private crowdGroup: Phaser.GameObjects.Container[] = [];
+  private crowdGroup: (Phaser.GameObjects.Container | Phaser.GameObjects.Image)[] = [];
 
   private get p() {
     return this.player!;
@@ -85,6 +86,9 @@ export default class BusChangesScene extends BaseScene {
       g.fillStyle(0x2b3a70, 1);
       g.fillRoundedRect(wx, h * 0.12, ww * 0.12, h * 0.24, 12);
     }
+    addBusBench(this, ww * 0.28, h * 0.68, 170, 0.75);
+    addBusBench(this, ww * 0.58, h * 0.68, 170, 0.75);
+    addBusBench(this, ww * 0.82, h * 0.68, 170, 0.75);
 
     this.player = new Player(this, ww * 0.06, h * 0.72);
     this.player.bounds = new Phaser.Geom.Rectangle(ww * 0.03, h * 0.62, ww * 0.94, h * 0.28);
@@ -129,15 +133,14 @@ export default class BusChangesScene extends BaseScene {
   private spawnCrowd(density: number, ww: number, h: number) {
     for (const c of this.crowdGroup) c.destroy();
     this.crowdGroup = [];
-    const count = Math.round(density * 14);
+    const count = Math.round(density * 18);
+    const npcKeys: NpcArtKey[] = ["boy-1", "girl-1", "boy-2", "girl-2", "boy-3", "girl-3", "boy-4", "girl-4"];
     for (let i = 0; i < count; i++) {
       const x = ww * 0.12 + Math.random() * ww * 0.78;
       const y = h * (0.64 + Math.random() * 0.24);
-      const body = this.add.graphics();
-      body.fillStyle([0x1a2444, 0x1e2a52, 0x16203e][i % 3], 1);
-      body.fillEllipse(0, 0, 28, 46);
-      body.fillCircle(0, -28, 10);
-      const c = this.add.container(x, y, [body]).setDepth(DEPTH.world);
+      const c =
+        addStudentNpc(this, npcKeys[(i + this.beat) % npcKeys.length], x, y, 58 + (i % 4) * 5, 0.72, i % 2 === 0) ??
+        this.add.container(x, y).setDepth(DEPTH.world);
       this.crowdGroup.push(c);
       // people are soft obstacles — they part, they never fight
       this.colliders.push(circle(x, y, 15));

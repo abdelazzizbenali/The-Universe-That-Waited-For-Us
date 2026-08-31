@@ -9,7 +9,7 @@ export class Player {
   soul: Soul;
   pos: Phaser.Math.Vector2;
   vel: Phaser.Math.Vector2;
-  speed = 208;
+  speed = 245;
   radius = 13;
   frozen = false;
   bounds: Phaser.Geom.Rectangle | null = null;
@@ -52,15 +52,16 @@ export class Player {
   ) {
     const ax = this.frozen ? 0 : axis.x;
     const ay = this.frozen ? 0 : axis.y;
-    const accel = 1500;
+    const accel = 2600;
 
     this.vel.x += ax * accel * dtSec;
     this.vel.y += ay * accel * dtSec;
 
     const max = this.speed * Math.min(1, Math.hypot(ax, ay) || (this.vel.length() / this.speed ? 1 : 0));
     if (ax === 0 && ay === 0) {
-      const f = Math.max(0, 1 - 7.5 * dtSec);
+      const f = Math.max(0, 1 - 12 * dtSec);
       this.vel.scale(f);
+      if (this.vel.lengthSq() < 18) this.vel.set(0, 0);
     } else if (this.vel.length() > max) {
       this.vel.setLength(max);
     }

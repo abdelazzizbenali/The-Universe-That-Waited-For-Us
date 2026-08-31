@@ -8,6 +8,7 @@ import { Companion } from "../entities/Companion";
 import { circle, rect } from "../systems/world/colliders";
 import { DEPTH, MEMORY_IDS } from "../config";
 import { addLightPool, addMotes } from "../art/environment";
+import { addBusBench, addNpcLine, addStudentNpc } from "../art/NpcArt";
 
 export default class SchoolBusScene extends BaseScene {
   private companion!: Companion;
@@ -90,6 +91,17 @@ export default class SchoolBusScene extends BaseScene {
     addMotes(this, new Phaser.Geom.Rectangle(0, h * 0.12, ww, h * 0.42), 10, 0xbfd9ff, 0.22);
 
     this.world.addDust(10, new Phaser.Geom.Rectangle(0, h * 0.1, ww, h * 0.5), 0x9fb0d0, 0.16);
+
+    // Provided bench art marks the real seat where they sit. A few classmates
+    // fill the bus but stay off the aisle and never block the saved place.
+    seatXs.forEach((sx, i) => addBusBench(this, sx + 45, h * 0.61, i === 5 ? 174 : 132, i === 5 ? 1 : 0.72));
+    addNpcLine(
+      this,
+      seatXs.slice(0, 5).map((sx, i) => ({ x: sx + 38, y: h * 0.59, height: 54 + (i % 2) * 4, alpha: 0.7 })),
+      1
+    );
+    addStudentNpc(this, "girl-3", ww * 0.34, h * 0.78, 70, 0.76, true);
+    addStudentNpc(this, "boy-2", ww * 0.48, h * 0.8, 70, 0.76);
 
     // him — already seated, the space beside him kept
     const hisSeat = seatXs[5];

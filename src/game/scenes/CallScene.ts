@@ -182,7 +182,7 @@ export default class CallScene extends BaseScene {
     this.done = true;
     this.p.setFrozen(true);
     this.ui.setHint(null);
-    this.cameras.main.zoomTo(1.06, 2400, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom * 1.06, 2400, "Sine.easeInOut");
 
     await new Promise((r) => this.time.delayedCall(1600, r));
     await this.ui.say([

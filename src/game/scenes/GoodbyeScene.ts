@@ -109,7 +109,7 @@ export default class GoodbyeScene extends BaseScene {
     this.tweens.add({ targets: this.cold, alpha: 0.34, duration: 4000 });
     this.audio.duckBed("bus-engine", 0.012, 4);
     this.audio.stopMotif();
-    this.cameras.main.zoomTo(0.94, 4200, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom * 0.94, 4200, "Sine.easeInOut");
     this.p.soul.setIntensity(0.72);
     this.p.soul.setWarmth(0.08);
     for (const s of this.streaks) this.tweens.getTweensOf(s).forEach((tw) => (tw.timeScale = 0.55));
