@@ -5,11 +5,12 @@ import Phaser from "phaser";
 import { runtime } from "../runtime";
 import { session } from "../systems/session/Session";
 import { DEPTH } from "../config";
-import { Backdrop } from "../art/Backdrop";
-import { SCENE_ART } from "../art/SceneArt";
+import { Backdrop, type Mode as BackdropMode } from "../art/Backdrop";
+import { SCENE_ART, WORLD_GEOM, type WorldGeom } from "../art/SceneArt";
 import { InputAdapter } from "../systems/input/InputAdapter";
 import { CameraRig } from "../systems/camera/CameraRig";
 import { WorldDresser } from "../systems/world/WorldDresser";
+import { rect } from "../systems/world/colliders";
 import type { Collider } from "../systems/world/colliders";
 import type { Player } from "../entities/Player";
 
@@ -138,6 +139,38 @@ export abstract class BaseScene extends Phaser.Scene {
   abstract build(): void;
   protected tick(_dt: number, _t: number): void {}
 
+  /** Migrate a scene to use the painted backdrop as world geometry.
+   *  Call early in build() (after super.create has set up the backdrop)
+   *  BEFORE placing players/props. Returns the world-geometry record so
+   *  the scene can use its anchors/blockers. */
+  protected useWorldSpace(): WorldGeom | null {
+    if (!this.backdrop) return null;
+    this.backdrop.useWorldSpace();
+    this.rig.useWorldZoom(true);
+    const art = SCENE_ART[this.scene.key];
+    const geom = WORLD_GEOM[art.key];
+    if (!geom) return null;
+    this.rig.setBounds(0, 0, this.backdrop.width, this.backdrop.height);
+    // blockers (walls/shelves) → colliders
+    if (geom.blockers) {
+      for (const b of geom.blockers) {
+        this.colliders.push(rect(b.x + b.w / 2, b.y + b.h / 2, b.w, b.h));
+      }
+    }
+    return geom;
+  }
+
+  /** True after useWorldSpace has been called. */
+  protected get worldSpace(): boolean {
+    return this.backdrop?.mode === "world";
+  }
+
+  /** The camera zoom this scene prefers. Legacy viewport-space scenes
+   *  need zoom 1; world-space scenes use the player's chosen zoom. */
+  get preferredZoom(): number {
+    return this.worldSpace ? 1 : 1; // 1 = let rig apply default
+  }
+
   create() {
     this.ui.reset();
     this.world = new WorldDresser(this);
@@ -162,20 +195,17 @@ export abstract class BaseScene extends Phaser.Scene {
     this.cameras.main.fadeIn(760, 7, 11, 26);
     this.build();
 
-    /* Scenes were authored before the paintings existed: they fill their
-       skies and floors with flat blocks. Where a painting is present those
-       blocks would bury it, so background-layer Graphics are softened into
-       translucent grading passes. They still read as ground and still carry
-       each scene's colour, but the painted world shows through them.
-       Props, characters and anything above the ground layer are untouched. */
-    if (this.backdrop) {
+    /* When a scene is migrated to world-space, the painting IS the
+       environment: hide the old procedural sky/floor/prop Graphics so
+       they don't draw over top. Cover-mode (unmigrated) scenes still rely
+       on those Graphics for their gameplay readability, so leave them at
+       full alpha there. */
+    if (this.backdrop && this.backdrop.mode === "world") {
       for (const obj of this.children.list) {
         if (!(obj instanceof Phaser.GameObjects.Graphics)) continue;
         const d = obj.depth;
-        if (d > DEPTH.groundDecor) continue;
-        // painted furniture and floors now carry the room; the old blocks
-        // stay only as faint depth masses so they never ghost over the art
-        obj.setAlpha(d <= DEPTH.skyFar ? 0.08 : 0.26);
+        if (d > DEPTH.props) continue;
+        obj.setAlpha(0);
       }
     }
     // souls created during build() inherit the motion preference
