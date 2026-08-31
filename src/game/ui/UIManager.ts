@@ -115,6 +115,8 @@ export class UIManager {
             <input id="set-music" type="range" min="0" max="100" step="1" /></label>
           <label class="set-row"><span>effects</span>
             <input id="set-fx" type="range" min="0" max="100" step="1" /></label>
+          <label class="set-row"><span>zoom</span>
+            <input id="set-zoom" type="range" min="135" max="320" step="5" /></label>
           <label class="set-toggle"><input id="set-mute" type="checkbox" /><span>mute everything</span></label>
           <label class="set-toggle"><input id="set-motion" type="checkbox" /><span>reduced motion</span></label>
           <p class="set-note">Reduced motion calms the camera and thins the particles. Nothing in the story is lost.</p>
@@ -422,14 +424,15 @@ export class UIManager {
 
   /** Wires the panel to the live Settings object. Called once at boot. */
   bindSettings(settings: {
-    state: { master: number; music: number; effects: number; muted: boolean; reducedMotion: boolean };
-    patch: (p: Partial<{ master: number; music: number; effects: number; muted: boolean; reducedMotion: boolean }>) => void;
+    state: { master: number; music: number; effects: number; muted: boolean; reducedMotion: boolean; zoom?: number };
+    patch: (p: Partial<{ master: number; music: number; effects: number; muted: boolean; reducedMotion: boolean; zoom: number }>) => void;
   }) {
     const gear = $("gear");
     const panel = $("settings");
     const master = $("set-master") as HTMLInputElement;
     const music = $("set-music") as HTMLInputElement;
     const fx = $("set-fx") as HTMLInputElement;
+    const zoom = $("set-zoom") as HTMLInputElement;
     const mute = $("set-mute") as HTMLInputElement;
     const motion = $("set-motion") as HTMLInputElement;
 
@@ -437,6 +440,7 @@ export class UIManager {
       master.value = String(Math.round(settings.state.master * 100));
       music.value = String(Math.round(settings.state.music * 100));
       fx.value = String(Math.round(settings.state.effects * 100));
+      zoom.value = String(Math.round((settings.state.zoom ?? 2.2) * 100));
       mute.checked = settings.state.muted;
       motion.checked = settings.state.reducedMotion;
     };
@@ -469,6 +473,7 @@ export class UIManager {
     master.addEventListener("input", () => settings.patch({ master: Number(master.value) / 100 }));
     music.addEventListener("input", () => settings.patch({ music: Number(music.value) / 100 }));
     fx.addEventListener("input", () => settings.patch({ effects: Number(fx.value) / 100 }));
+    zoom.addEventListener("input", () => settings.patch({ zoom: Number(zoom.value) / 100 }));
     mute.addEventListener("change", () => settings.patch({ muted: mute.checked }));
     motion.addEventListener("change", () => settings.patch({ reducedMotion: motion.checked }));
   }

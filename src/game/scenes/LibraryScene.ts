@@ -102,22 +102,56 @@ export default class LibraryScene extends BaseScene {
       this.colliders.push(rect(sx + ww * 0.065, hh * 0.34, ww * 0.13, hh * 0.4));
     }
 
-    // the table — center-right, where it happened
+    // Exactly four small physical tables. The special story table is center-right
+    // with HER SEAT on the near side, adjacent to him but not against an edge.
     this.tablePos = new Phaser.Math.Vector2(ww * 0.62, hh * 0.6);
     const t = this.tablePos;
-    g.fillStyle(0x243064, 1);
-    g.fillRoundedRect(t.x - 90, t.y - 26, 180, 52, 12);
-    g.fillStyle(0x2b3a74, 1);
-    g.fillRoundedRect(t.x - 90, t.y - 26, 180, 14, { tl: 12, tr: 12, bl: 0, br: 0 });
-    this.colliders.push(rect(t.x, t.y, 190, 60));
-    // his chair (far side) and hers (near)
-    g.fillStyle(0x1a2550, 1);
-    g.fillRoundedRect(t.x + 30, t.y - 66, 34, 30, 8);
-    g.fillRoundedRect(t.x + 30, t.y + 38, 34, 30, 8);
+    const tables = [
+      { key: "trim-table-1", x: t.x, y: t.y, w: 132, h: 61, special: true },
+      { key: "trim-table-2", x: ww * 0.30, y: hh * 0.66, w: 118, h: 56 },
+      { key: "trim-table-3", x: ww * 0.48, y: hh * 0.78, w: 118, h: 52 },
+      { key: "trim-table-1", x: ww * 0.80, y: hh * 0.76, w: 112, h: 52 },
+    ];
+    for (const table of tables) {
+      if (this.textures.exists(table.key)) {
+        const img = this.add.image(table.x, table.y, table.key).setOrigin(0.5).setDisplaySize(table.w, table.h).setDepth(DEPTH.props + table.y / 1000);
+        this.add.image(table.x, table.y + table.h * 0.35, "shadow").setScale(table.w / 128, 0.18).setAlpha(0.22).setDepth(DEPTH.groundShadow);
+        void img;
+      } else {
+        g.fillStyle(0x243064, 1);
+        g.fillRoundedRect(table.x - table.w / 2, table.y - table.h / 2, table.w, table.h, 10);
+      }
+      this.colliders.push(rect(table.x, table.y, table.w * 0.9, table.h * 0.72));
+    }
+    const chair = (key: string, x: number, y: number, hgt = 44) => {
+      if (this.textures.exists(key)) {
+        const src = this.textures.get(key).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+        this.add.image(x, y, key).setOrigin(0.5, 1).setDisplaySize((src.width / src.height) * hgt, hgt).setDepth(DEPTH.props + y / 1000);
+      } else {
+        g.fillStyle(0x1a2550, 1);
+        g.fillRoundedRect(x - 17, y - hgt, 34, 30, 8);
+      }
+    };
+    chair("trim-chair-back", t.x + 47, t.y - 28, 42); // his chair / far side
+    chair("trim-chair-front", t.x + 47, t.y + 76, 46); // HER SEAT / near side
+    chair("trim-chair-front", ww * 0.30, hh * 0.73, 42);
+    chair("trim-chair-back", ww * 0.48, hh * 0.72, 42);
+    chair("trim-chair-front", ww * 0.80, hh * 0.83, 42);
 
     // dust in the sunlight
     this.world.addDust(26, new Phaser.Geom.Rectangle(ww * 0.55, hh * 0.12, ww * 0.42, hh * 0.6), 0xf4e3c0, 0.3);
     this.world.addDust(14, new Phaser.Geom.Rectangle(0, hh * 0.1, ww * 0.5, hh * 0.6), 0x9fb0d0, 0.14);
+
+    // quiet students are present but not in the important path.
+    for (const s of [
+      { key: "trim-girl-4", x: ww * 0.29, y: hh * 0.73 },
+      { key: "trim-boy-4", x: ww * 0.80, y: hh * 0.83 },
+    ]) {
+      if (this.textures.exists(s.key)) {
+        const img = this.add.image(s.x, s.y, s.key).setOrigin(0.5, 1).setDisplaySize(36, 78).setDepth(DEPTH.soul + s.y / 1000).setAlpha(0.86);
+        void img;
+      }
+    }
 
     // him — he finds the table and waits
     this.companion = new Companion(this, ww * 0.55, hh * 0.8);

@@ -59,8 +59,9 @@ class PromptIndicator {
       .container(0, 0, [this.glow, this.ring, this.text])
       .setDepth(DEPTH.prompt)
       .setVisible(false);
-    // prompts are world-anchored but never scaled by camera zoom
-    this.container.setScrollFactor(1);
+    // positioned in screen pixels after world→screen conversion; do not let
+    // the camera scroll it a second time.
+    this.container.setScrollFactor(0);
   }
 
   update(
@@ -161,6 +162,18 @@ export abstract class BaseScene extends Phaser.Scene {
     });
     this.cameras.main.fadeIn(760, 7, 11, 26);
     this.build();
+    if (this.backdrop) {
+      this.cameras.main.setBounds(0, 0, this.backdrop.width, this.backdrop.height, true);
+      if (this.player?.bounds) {
+        const b = this.player.bounds;
+        b.x = Math.min(Math.max(0, b.x), Math.max(0, this.backdrop.width - 2));
+        b.y = Math.min(Math.max(0, b.y), Math.max(0, this.backdrop.height - 2));
+        const maxW = Math.max(1, this.backdrop.width - b.x);
+        const maxH = Math.max(1, this.backdrop.height - b.y);
+        b.width = Math.min(b.width, maxW);
+        b.height = Math.min(b.height, maxH);
+      }
+    }
 
     /* Scenes were authored before the paintings existed: they fill their
        skies and floors with flat blocks. Where a painting is present those

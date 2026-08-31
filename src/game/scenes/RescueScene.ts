@@ -261,7 +261,7 @@ export default class RescueScene extends BaseScene {
     this.tweens.add({ targets: this.clock, alpha: 0, duration: 1800 });
     this.audio.settle();
     this.audio.startMotif("warm");
-    this.cameras.main.zoomTo(1.08, 3000, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom * 1.08, 3000, "Sine.easeInOut");
     this.p.soul.setWarmth(0.5);
     this.p.soul.setIntensity(1.3);
 

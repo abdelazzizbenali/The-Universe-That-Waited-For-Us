@@ -164,7 +164,7 @@ export default class VideoBusScene extends BaseScene {
     }
 
     // a personal recording: warm grain, gentle breathing zoom
-    this.cameras.main.zoomTo(1.08, 2400, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom * 1.08, 2400, "Sine.easeInOut");
     this.audio.tone(880, 0.02, 0.2);
   }
 
@@ -178,7 +178,7 @@ export default class VideoBusScene extends BaseScene {
     this.recDot = null;
     this.recText?.destroy();
     this.recText = null;
-    this.cameras.main.zoomTo(1, 1200, "Sine.easeInOut");
+    this.cameras.main.zoomTo(this.settings.zoom, 1200, "Sine.easeInOut");
     this.audio.shutter();
     void this.finish();
   }

@@ -58,6 +58,19 @@ export default class LookScene extends BaseScene {
     this.world.addDust(14, new Phaser.Geom.Rectangle(0, h * 0.3, w, h * 0.7), 0xbfd9ff, 0.22);
     this.world.startBirds(12000);
 
+    // A few campus people give the university entrance scale without blocking
+    // the first-look line. They are scene dressing only and disappear after this beat.
+    for (const npc of [
+      { key: "trim-teacher-1", x: w * 0.52, y: h * 0.48, hgt: 72 },
+      { key: "trim-girl-2", x: w * 0.38, y: h * 0.62, hgt: 66 },
+      { key: "trim-boy-2", x: w * 0.62, y: h * 0.64, hgt: 66 },
+    ]) {
+      if (this.textures.exists(npc.key)) {
+        const src = this.textures.get(npc.key).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
+        this.add.image(npc.x, npc.y, npc.key).setOrigin(0.5, 1).setDisplaySize((src.width / src.height) * npc.hgt, npc.hgt).setDepth(DEPTH.soul + npc.y / 1000).setAlpha(0.82);
+      }
+    }
+
     // him — across the courtyard
     this.companion = new Companion(this, w * 0.8, h * 0.46);
     this.companion.setState("distant");

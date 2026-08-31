@@ -122,7 +122,7 @@ export default class HandHoldScene extends BaseScene {
       this.audio.duckAmbience(1 - r * 0.75, 0.4);
       this.p.soul.setIntensity(0.9 + r * 0.5);
       this.p.soul.setWarmth(r * 0.4);
-      this.cameras.main.setZoom(1 + r * 0.06);
+      this.cameras.main.setZoom(this.settings.zoom * (1 + r * 0.06));
       for (const s of this.streaks) {
         this.tweens.getTweensOf(s).forEach((tw) => (tw.timeScale = 1 - r * 0.7));
       }
