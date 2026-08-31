@@ -1,19 +1,11 @@
-/* Scene 1 — PROLOGUE. The world before it had a name: sparse stars, closed
-   flowers, hidden spirits, a blue light too far away. Walk to the hilltop;
-   one star wakes; the title arrives. */
+/* Scene 1 — PROLOGUE. The night hill. Walk to the top; a single star
+ * wakes; the title arrives. A soft, quiet opening that teaches movement. */
 import Phaser from "phaser";
 import { BaseScene } from "./BaseScene";
 import { Player } from "../entities/Player";
 import { Soul } from "../entities/Soul";
 import { DEPTH, MEMORY_IDS } from "../config";
-import {
-  addFog,
-  addForeground,
-  addLightPool,
-  addRidges,
-  addTerrain,
-  addVignette,
-} from "../art/environment";
+import { addMotes } from "../art/environment";
 
 export default class PrologueScene extends BaseScene {
   private blueFar!: Soul;
@@ -25,46 +17,68 @@ export default class PrologueScene extends BaseScene {
   }
 
   build() {
-    const w = this.scale.width;
-    const h = this.scale.height;
-    this.hilltop = new Phaser.Math.Vector2(w * 0.78, h * 0.42);
+    const geom = this.useWorldSpace();
 
-    this.skyRect(0x070b1a, 0x0c1434, w, h);
-    // layered sky: distant ridges, then the hill itself
-    addRidges(this, w, h * 0.52);
-    this.world.addStars(70, new Phaser.Geom.Rectangle(-w * 0.2, 0, w * 1.4, h * 0.62));
-    addFog(this, w, h * 0.42, h * 0.62, 2, 0x8fa8d8);
+    // anchors from world geom
+    const floor = geom!.floor;
+    const start = geom!.anchors!.start;
+    this.hilltop = new Phaser.Math.Vector2(geom!.anchors!.hilltop.x, geom!.anchors!.hilltop.y);
+    const bluePos = geom!.anchors!.blueLight;
 
-    // ground — layered terrain rather than a flat fill
-    const g = this.add.graphics().setDepth(DEPTH.ground);
-    g.fillStyle(0x0a1130, 1);
-    g.fillEllipse(w * 0.08, h * 1.22, w * 0.9, h * 0.5);
-    g.fillStyle(0x0c1434, 1);
-    g.fillEllipse(w * 0.55, h * 1.3, w * 1.1, h * 0.62);
-    addTerrain(this, w, h * 0.78, h * 0.16, 0.8);
-    addForeground(this, w, h * 0.95, 0x04060f);
-    addVignette(this, 0x070b1a, 0.28);
+    // Atmospheric dust across the sky band
+    addMotes(
+      this,
+      new Phaser.Geom.Rectangle(0, 0, this.backdrop!.width, floor.y),
+      26,
+      0xbcd6ff,
+      0.22
+    );
 
-    // moonlight spill on the hilltop, where the first star will wake
-    addLightPool(this, this.hilltop.x, this.hilltop.y + 6, 210, 90, 0xbcd6ff, 0.13);
+    // stars (the ones already on the painting stay; we add a few pulsing
+    // bright ones to signal the waking sky).
+    this.world.addStars(60, new Phaser.Geom.Rectangle(0, 0, this.backdrop!.width, floor.y - 40));
 
-    // the waiting spot on the hilltop
+    // moonlight spill on the hilltop
+    const spill = this.add
+      .image(this.hilltop.x, this.hilltop.y + 30, "halo")
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0xbcd6ff)
+      .setAlpha(0.18)
+      .setScale(3.3, 1.4)
+      .setDepth(DEPTH.light);
+    this.tweens.add({
+      targets: spill,
+      alpha: 0.3,
+      duration: 2200,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+
+    // waiting spot glow
     const spot = this.add
       .image(this.hilltop.x, this.hilltop.y, "mote")
       .setBlendMode(Phaser.BlendModes.ADD)
       .setTint(0x9fb0d0)
-      .setScale(9)
-      .setAlpha(0.16)
+      .setScale(10)
+      .setAlpha(0.18)
       .setDepth(DEPTH.ground + 1);
-    this.tweens.add({ targets: spot, alpha: 0.3, duration: 2100, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({
+      targets: spot,
+      alpha: 0.32,
+      duration: 2100,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
 
-    // closed flowers along the way
+    // closed flowers along the slope
     const flowers = this.world.addFlowers([
-      { x: w * 0.3, y: h * 0.8 },
-      { x: w * 0.44, y: h * 0.68 },
-      { x: w * 0.56, y: h * 0.74 },
-      { x: w * 0.66, y: h * 0.58 },
-      { x: w * 0.71, y: h * 0.5 },
+      { x: floor.x + 250, y: floor.y + 180 },
+      { x: floor.x + 480, y: floor.y + 120 },
+      { x: floor.x + 720, y: floor.y + 160 },
+      { x: floor.x + 980, y: floor.y + 90 },
+      { x: floor.x + 1160, y: floor.y + 60 },
     ]);
     flowers.forEach((f, i) => {
       this.interactables.push({
@@ -82,24 +96,22 @@ export default class PrologueScene extends BaseScene {
     });
 
     this.world.addSpirits([
-      { x: w * 0.2, y: h * 0.55 },
-      { x: w * 0.5, y: h * 0.48 },
-      { x: w * 0.84, y: h * 0.62 },
+      { x: 340, y: floor.y - 80 },
+      { x: 820, y: floor.y - 140 },
+      { x: 1360, y: floor.y - 40 },
     ]);
 
-    // the distant blue — present, mysterious, unreachable
-    this.blueFar = new Soul(this, w * 0.88, h * 0.22, "blue", { scale: 0.45, bob: 2 });
-    this.blueFar.setIntensity(0.55);
+    // distant blue light — on the horizon, unreachable
+    this.blueFar = new Soul(this, bluePos.x, bluePos.y, "blue", { scale: 0.5 });
+    this.blueFar.setIntensity(0.6);
 
-    // player
-    this.player = new Player(this, w * 0.16, h * 0.74);
-    this.player.bounds = new Phaser.Geom.Rectangle(w * 0.05, h * 0.36, w * 0.88, h * 0.54);
-    this.player.soul.setIntensity(0.85);
-    this.rig.follow(this.player.soul.container, 0.08, 1);
+    // her (player)
+    this.player = new Player(this, start.x, start.y);
+    this.player.bounds = new Phaser.Geom.Rectangle(floor.x, floor.y, floor.w, floor.h);
+    this.player.soul.setIntensity(0.9);
+    this.rig.follow(this.player.soul.container, 0.08);
 
     this.audio.playBed("night-wind");
-    // teach movement without a tutorial: the hint adapts to how she's playing
-    // and gets out of the way the moment she starts walking
     const touch = this.sys.game.device.input.touch;
     this.ui.setHint(touch ? "hold anywhere on the left to walk" : "wasd or arrow keys to walk");
   }
@@ -110,7 +122,6 @@ export default class PrologueScene extends BaseScene {
   protected tick(dt: number, t: number) {
     this.blueFar.update(dt, t, this.colors);
 
-    // once she has walked a little, she has understood — swap to the goal
     if (!this.taught) {
       if (this.p.isMoving) this.moved += dt;
       if (this.moved > 1.1) {
@@ -121,7 +132,7 @@ export default class PrologueScene extends BaseScene {
 
     if (this.starBeat) return;
     const d = Phaser.Math.Distance.Between(this.p.pos.x, this.p.pos.y, this.hilltop.x, this.hilltop.y);
-    if (d < 52) void this.wakeStar();
+    if (d < 70) void this.wakeStar();
   }
 
   private async wakeStar() {
@@ -131,7 +142,7 @@ export default class PrologueScene extends BaseScene {
     this.ui.setHint(null);
 
     const sx = this.hilltop.x;
-    const sy = this.scale.height * 0.16;
+    const sy = 180;
     const star = this.add
       .image(sx, sy, "star")
       .setScale(0)
@@ -139,10 +150,19 @@ export default class PrologueScene extends BaseScene {
       .setDepth(DEPTH.fx);
     this.audio.starIgnite();
     this.audio.startMotif("airy");
-    this.rig.focusPull(sx, this.hilltop.y, 1.1, 1500);
+    this.rig.focusPull(sx, this.hilltop.y, 1.2, 1500);
 
-    this.tweens.add({ targets: star, scale: 2.4, duration: 1600, ease: "Back.easeOut" });
-    this.tweens.add({ targets: star, alpha: 0.6, scale: 2.0, duration: 2000, delay: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: star, scale: 2.6, duration: 1600, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: star,
+      alpha: 0.6,
+      scale: 2.2,
+      duration: 2000,
+      delay: 1700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
     for (let i = 0; i < 12; i++) {
       const m = this.add.image(sx, sy + 30, "mote").setBlendMode(Phaser.BlendModes.ADD).setTint(0xd6eeff).setScale(0.9).setDepth(DEPTH.fx);
       const a = (i / 12) * Math.PI * 2;

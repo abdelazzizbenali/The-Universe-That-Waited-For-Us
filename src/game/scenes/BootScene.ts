@@ -1,8 +1,9 @@
-/* BootScene — loads the painted environment art, paints the procedural
-   sprite set, restores saved colour state, then hands over to the title. */
+/* BootScene — loads the painted environment art and painted character
+   sprites, paints the procedural sprite set used for glow/effects, then
+   hands over to the title. */
 import Phaser from "phaser";
 import { makeTextures } from "../art/textures";
-import { BACKDROP_FILES } from "../art/SceneArt";
+import { BACKDROP_FILES, SPRITE_FILES } from "../art/SceneArt";
 import { runtime } from "../runtime";
 
 export default class BootScene extends Phaser.Scene {
@@ -11,14 +12,14 @@ export default class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // painted backdrops — the base layer of every environment
     for (const [key, path] of Object.entries(BACKDROP_FILES)) {
       this.load.image(key, path);
     }
-    // never let a missing file take the whole game down: the scenes fall
-    // back to their procedural sky if a painting fails to arrive
+    for (const [key, path] of Object.entries(SPRITE_FILES)) {
+      this.load.image(key, path);
+    }
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
-      console.warn(`[boot] backdrop unavailable: ${file.key}`);
+      console.warn(`[boot] asset unavailable: ${file.key}`);
     });
   }
 

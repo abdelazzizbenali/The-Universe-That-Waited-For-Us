@@ -1,48 +1,58 @@
-/* Backdrop — painted environment art as the base layer of every scene.
-
-   These are real painted backgrounds, not procedural fills. Each one is
-   fitted to the viewport with "cover" maths (never stretched out of ratio,
-   never letterboxed), pinned to the camera, and graded per scene so a single
-   painting can carry several emotional states — the same library can be
-   cold on the first visit and warm on the fourth.
-
-   Scene geometry, props and characters draw on top; the painting supplies
-   the depth, light and place that primitives cannot. */
+/* Backdrop — painted environment art. Supports two modes:
+ *
+ *  - "cover" (default): the painting fills the viewport (CSS-cover
+ *    behavior), pinned to the camera, exactly like a scrolling sky.
+ *    Used by scenes that still lay their gameplay out in viewport space.
+ *
+ *  - "world": the painting is placed at world (0,0) at native pixel size
+ *    and the world IS the painting. Camera bounds are clamped to the
+ *    floor so the viewport never reveals outside the art. Used by the
+ *    fully-migrated scenes (library, bus, finale…).
+ */
 import Phaser from "phaser";
 
 export interface BackdropMood {
-  /** Multiply tint — cools or warms the painting. */
   tint?: number;
-  /** 0..1 darkening veil over the art. */
   darken?: number;
-  /** 0..1 additive colour wash (used for OUR COLOR late game). */
   wash?: number;
   washTint?: number;
-  /** Slow drift, in pixels, for a sense of breath. Ignored in reduced motion. */
   drift?: number;
-  /** Extra zoom past cover fit, for a touch of parallax headroom. */
   zoom?: number;
 }
 
 const BACKDROP_DEPTH = -1000;
 
+export type Mode = "cover" | "world";
+
 export class Backdrop {
   private img: Phaser.GameObjects.Image;
   private veil: Phaser.GameObjects.Rectangle;
   private wash: Phaser.GameObjects.Rectangle | null = null;
-  private baseZoom: number;
   private drift: number;
   private t = 0;
+  private scene: Phaser.Scene;
+  /** Native pixel size. */
+  readonly width: number;
+  readonly height: number;
+  private baseZoom = 1.06;
+  /** Which placement mode is active. */
+  private mode_: Mode = "cover";
+  get mode(): Mode { return this.mode_; }
 
   constructor(
-    private scene: Phaser.Scene,
+    scene: Phaser.Scene,
     key: string,
     mood: BackdropMood = {},
     reduced = false
   ) {
+    this.scene = scene;
     const { tint, darken = 0, wash = 0, washTint = 0x93dcbb, drift = 0, zoom = 1.06 } = mood;
     this.baseZoom = zoom;
     this.drift = reduced ? 0 : drift;
+
+    const src = scene.textures.get(key).getSourceImage() as HTMLImageElement;
+    this.width = src?.naturalWidth || src?.width || 1408;
+    this.height = src?.naturalHeight || src?.height || 768;
 
     this.img = scene.add
       .image(0, 0, key)
@@ -66,50 +76,84 @@ export class Backdrop {
         .setBlendMode(Phaser.BlendModes.ADD);
     }
 
-    this.fit();
-    scene.scale.on(Phaser.Scale.Events.RESIZE, this.fit, this);
+    this.fitCover();
+    scene.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      scene.scale.off(Phaser.Scale.Events.RESIZE, this.fit, this);
+      scene.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     });
   }
 
-  /** Cover-fit: fills the viewport on both axes, preserving aspect ratio. */
-  private fit() {
+  /** Switch the painting into world-anchored mode — it lives at world
+   *  (0,0) at native pixel size so gameplay uses image coordinates. */
+  useWorldSpace() {
+    this.mode_ = "world";
+    this.img
+      .setPosition(0, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(1)
+      .setScale(1);
+    const w = this.width, h = this.height;
+    this.veil
+      .setPosition(0, 0)
+      .setSize(w, h)
+      .setOrigin(0, 0)
+      .setScrollFactor(1);
+    if (this.wash) {
+      this.wash
+        .setPosition(0, 0)
+        .setSize(w, h)
+        .setOrigin(0, 0)
+        .setScrollFactor(1);
+    }
+  }
+
+  private onResize() {
+    if (this.mode === "cover") this.fitCover();
+  }
+
+  private fitCover() {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
-    const src = this.scene.textures.get(this.img.texture.key).getSourceImage();
-    const sw = (src as HTMLImageElement).width || 1536;
-    const sh = (src as HTMLImageElement).height || 1024;
+    const sw = this.width;
+    const sh = this.height;
     const scale = Math.max(w / sw, h / sh) * this.baseZoom;
-
     this.img.setPosition(w / 2, h / 2).setScale(scale);
     this.veil.setPosition(w / 2, h / 2).setSize(w, h);
     this.wash?.setPosition(w / 2, h / 2).setSize(w, h);
   }
 
-  /** Slow living drift, plus a gentle response to camera movement. */
   update(dtSec: number, cam?: Phaser.Cameras.Scene2D.Camera) {
     const w = this.scene.scale.width;
     const h = this.scene.scale.height;
-    let ox = 0;
-    let oy = 0;
+    this.t += dtSec;
 
-    if (this.drift > 0) {
-      this.t += dtSec;
-      ox += Math.sin(this.t * 0.06) * this.drift;
-      oy += Math.cos(this.t * 0.045) * this.drift * 0.4;
+    if (this.mode === "cover") {
+      let ox = 0, oy = 0;
+      if (this.drift > 0) {
+        ox += Math.sin(this.t * 0.06) * this.drift;
+        oy += Math.cos(this.t * 0.045) * this.drift * 0.4;
+      }
+      if (cam) {
+        // camera-parallax against the backdrop (slight)
+        const span = Math.max(1, cam.getBounds().width - w);
+        const p = Phaser.Math.Clamp((cam.scrollX - cam.getBounds().x) / span, 0, 1);
+        ox += (0.5 - p) * w * 0.04;
+      }
+      this.img.setPosition(w / 2 + ox, h / 2 + oy);
+      this.veil.setPosition(w / 2, h / 2);
+      this.wash?.setPosition(w / 2, h / 2);
+    } else {
+      // world-space: slow breath drift only
+      if (this.drift > 0) {
+        const ox = Math.sin(this.t * 0.06) * this.drift;
+        const oy = Math.cos(this.t * 0.045) * this.drift * 0.4;
+        this.img.setPosition(ox, oy);
+        this.veil.setPosition(ox, oy);
+        this.wash?.setPosition(ox, oy);
+      }
     }
-    // the painting shifts a little as the camera travels: cheap parallax
-    // that never reveals an edge because the image over-covers the frame
-    if (cam) {
-      const span = Math.max(1, cam.getBounds().width - w);
-      const p = Phaser.Math.Clamp((cam.scrollX - cam.getBounds().x) / span, 0, 1);
-      ox += (0.5 - p) * w * 0.06;
-    }
-    this.img.setPosition(w / 2 + ox, h / 2 + oy);
   }
 
-  /** Re-grade the painting live (used when a scene warms or wakes). */
   grade(mood: BackdropMood, ms = 2000) {
     if (mood.tint !== undefined) this.img.setTint(mood.tint);
     if (mood.darken !== undefined) {
