@@ -10,9 +10,10 @@ import { Companion } from "../entities/Companion";
 import { circle, rect, type Collider } from "../systems/world/colliders";
 import { DEPTH, MEMORY_IDS } from "../config";
 import { addLightPool, addMotes, addVignette } from "../art/environment";
+import { addBusBench, addStudentNpc, type NpcArtKey } from "../art/NpcArt";
 
 interface Yielder {
-  c: Phaser.GameObjects.Container;
+  c: Phaser.GameObjects.Container | Phaser.GameObjects.Image;
   col: Collider;
   hold: number;
   yielded: boolean;
@@ -73,17 +74,13 @@ export default class CrowdedBusScene extends BaseScene {
       { fx: 0.74, fy: 0.58, yields: false },
       { fx: 0.8, fy: 0.78, yields: false },
     ];
-    const shades = [0x1a2444, 0x1e2a4e, 0x16203e, 0x1c2748];
+    const npcKeys: NpcArtKey[] = ["boy-1", "girl-1", "boy-2", "girl-2", "boy-3", "girl-3", "boy-4", "girl-4"];
     spots.forEach((s, i) => {
       const x = ww * s.fx;
       const y = h * s.fy;
-      const pg = this.add.graphics();
-      const shade = shades[i % shades.length];
-      pg.fillStyle(shade, 1);
-      pg.fillEllipse(0, 0, 30, 44);
-      pg.fillStyle(shade + 0x0a0a14, 1);
-      pg.fillCircle(0, -26, 9);
-      const c = this.add.container(x, y, [pg]).setDepth(DEPTH.world);
+      const c =
+        addStudentNpc(this, npcKeys[i % npcKeys.length], x, y, 68 + (i % 3) * 5, 0.86, i % 2 === 0) ??
+        this.add.container(x, y).setDepth(DEPTH.world);
       const col = circle(x, y, 16);
       this.colliders.push(col);
       if (s.yields) {
@@ -120,6 +117,7 @@ export default class CrowdedBusScene extends BaseScene {
 
     // him — at the back, beside the place he kept for her
     const hisX = ww * 0.9;
+    addBusBench(this, hisX + 44, h * 0.64, 172, 1);
     this.companion = new Companion(this, hisX, h * 0.52);
     this.companion.setState("seated");
     const glow = this.add

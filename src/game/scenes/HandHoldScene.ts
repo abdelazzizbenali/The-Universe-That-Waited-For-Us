@@ -10,6 +10,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { HandHoldController } from "../systems/hands/HandHoldController";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addStudentNpc } from "../art/NpcArt";
 
 export default class HandHoldScene extends BaseScene {
   private companion!: Companion;
@@ -45,10 +46,10 @@ export default class HandHoldScene extends BaseScene {
     }
     g.fillStyle(0x0b1130, 1);
     g.fillRect(0, h * 0.4, ww, h * 0.6);
-    g.fillStyle(0x141d44, 1);
-    g.fillRoundedRect(ww * 0.14, h * 0.52, 150, h * 0.16, 12);
-    g.fillStyle(0x1a2550, 1);
-    g.fillRoundedRect(ww * 0.14, h * 0.64, 150, h * 0.05, 8);
+    addBusBench(this, ww * 0.2, h * 0.68, 190, 1);
+    // almost empty, but not impossible: a couple of far passengers keep the bus real.
+    addStudentNpc(this, "girl-1", ww * 0.62, h * 0.66, 58, 0.38, true);
+    addStudentNpc(this, "boy-3", ww * 0.82, h * 0.68, 60, 0.34);
 
     for (let i = 0; i < 4; i++) {
       const s = this.add

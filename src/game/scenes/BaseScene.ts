@@ -10,6 +10,7 @@ import { SCENE_ART } from "../art/SceneArt";
 import { InputAdapter } from "../systems/input/InputAdapter";
 import { CameraRig } from "../systems/camera/CameraRig";
 import { WorldDresser } from "../systems/world/WorldDresser";
+import { addNpcLine, addStudentNpc } from "../art/NpcArt";
 import type { Collider } from "../systems/world/colliders";
 import type { Player } from "../entities/Player";
 
@@ -162,6 +163,7 @@ export abstract class BaseScene extends Phaser.Scene {
     });
     this.cameras.main.fadeIn(760, 7, 11, 26);
     this.build();
+    this.addAmbientNpcs();
     if (this.backdrop) {
       this.cameras.main.setBounds(0, 0, this.backdrop.width, this.backdrop.height, true);
       if (this.player?.bounds) {
@@ -193,6 +195,61 @@ export abstract class BaseScene extends Phaser.Scene {
     }
     // souls created during build() inherit the motion preference
     if (this.settings.reducedMotion && this.player) this.player.soul.motionScale = 0.3;
+  }
+
+  /**
+   * Extra life in the scenes, drawn from the provided boy/girl/teacher NPC art.
+   * They are visual-only so they never break reachability, collisions, or story
+   * triggers. Placement is deliberately at edges/background bands.
+   */
+  private addAmbientNpcs() {
+    const key = this.scene.key;
+    if (key === "TitleScene" || key === "PrologueScene") return;
+    const ww = this.player?.bounds ? this.player.bounds.x + this.player.bounds.width : this.backdrop?.width ?? this.scale.width;
+    const h = this.scale.height;
+
+    const campus = ["LookScene", "WatchingScene", "EveningWalkScene", "WaitingScene", "MutualCareScene", "CameraScene"];
+    const library = ["LibraryScene", "ExamLibraryScene", "ProjectScene", "ReportScene", "RescueScene"];
+    const cosmic = ["CommitmentScene", "DecemberScene", "VisionScene", "ConstantineScene", "ColorHuntScene", "HolidayHubScene", "FinaleScene", "RevealScene", "WishScene", "FreeExploreScene"];
+
+    if (campus.includes(key)) {
+      addNpcLine(
+        this,
+        [
+          { x: ww * 0.18, y: h * 0.64, height: 62, alpha: 0.56 },
+          { x: ww * 0.32, y: h * 0.7, height: 68, alpha: 0.62, flipX: true },
+          { x: ww * 0.48, y: h * 0.62, height: 58, alpha: 0.45 },
+          { x: ww * 0.66, y: h * 0.74, height: 68, alpha: 0.58, flipX: true },
+          { x: ww * 0.84, y: h * 0.68, height: 62, alpha: 0.5 },
+        ],
+        key.length % 8
+      );
+      if (key === "LookScene" || key === "WatchingScene") {
+        addStudentNpc(this, "teacher-2", ww * 0.56, h * 0.58, 76, 0.58, true);
+      }
+    } else if (library.includes(key)) {
+      addNpcLine(
+        this,
+        [
+          { x: ww * 0.16, y: h * 0.86, height: 56, alpha: 0.36 },
+          { x: ww * 0.34, y: h * 0.9, height: 58, alpha: 0.34, flipX: true },
+          { x: ww * 0.72, y: h * 0.87, height: 56, alpha: 0.34 },
+          { x: ww * 0.9, y: h * 0.82, height: 58, alpha: 0.32, flipX: true },
+        ],
+        2
+      );
+      addStudentNpc(this, "teacher-1", ww * 0.52, h * 0.55, 72, 0.28);
+    } else if (cosmic.includes(key)) {
+      addNpcLine(
+        this,
+        [
+          { x: ww * 0.2, y: h * 0.72, height: 54, alpha: 0.22 },
+          { x: ww * 0.45, y: h * 0.66, height: 58, alpha: 0.2, flipX: true },
+          { x: ww * 0.72, y: h * 0.74, height: 54, alpha: 0.2 },
+        ],
+        5
+      ).forEach((npc) => npc?.setTint(0x9fb0d0));
+    }
   }
 
   update(time: number, delta: number) {

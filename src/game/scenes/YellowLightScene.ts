@@ -12,6 +12,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { VisionStack } from "../systems/vision/VisionStack";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addStudentNpc } from "../art/NpcArt";
 
 interface YellowLamp {
   x: number;
@@ -55,6 +56,9 @@ export default class YellowLightScene extends BaseScene {
     g.fillRect(0, h * 0.38, ww, h * 0.62);
     g.fillStyle(0x0b1228, 1);
     g.fillRoundedRect(0, h * 0.56, ww, h * 0.24, 10);
+    addBusBench(this, ww * 0.18, h * 0.69, 168, 0.5);
+    addBusBench(this, ww * 0.5, h * 0.69, 168, 0.44);
+    addBusBench(this, ww * 0.78, h * 0.69, 168, 0.44);
 
     // the small yellow lights above the passengers, off for now
     for (let i = 0; i < 6; i++) {
@@ -68,15 +72,12 @@ export default class YellowLightScene extends BaseScene {
       this.lamps.push({ x: lx, y: h * 0.3, img, on: false });
     }
 
-    // sleeping passengers — shapes in the dark
-    for (let i = 0; i < 10; i++) {
+    // sleeping passengers — actual NPC pictures dimmed down into silhouettes.
+    const sleepers = ["boy-1", "girl-1", "boy-2", "girl-2", "boy-3", "girl-3", "boy-4", "girl-4", "boy-1", "girl-2"] as const;
+    for (let i = 0; i < sleepers.length; i++) {
       const x = ww * 0.12 + Math.random() * ww * 0.76;
       const y = h * (0.6 + Math.random() * 0.2);
-      const body = this.add.graphics();
-      body.fillStyle(0x101828, 1);
-      body.fillEllipse(0, 0, 28, 44);
-      body.fillCircle(0, -26, 10);
-      this.add.container(x, y, [body]).setDepth(DEPTH.world);
+      addStudentNpc(this, sleepers[i], x, y, 56 + (i % 3) * 4, 0.3, i % 2 === 0)?.setTint(0x8a93ad);
     }
 
     this.dark = this.add

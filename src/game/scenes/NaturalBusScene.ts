@@ -11,6 +11,7 @@ import { Companion } from "../entities/Companion";
 import { HandHoldController } from "../systems/hands/HandHoldController";
 import { circle, rect } from "../systems/world/colliders";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addStudentNpc, type NpcArtKey } from "../art/NpcArt";
 
 export default class NaturalBusScene extends BaseScene {
   private companion!: Companion;
@@ -48,9 +49,10 @@ export default class NaturalBusScene extends BaseScene {
       g.fillRoundedRect(sx, h * 0.42, 54, h * 0.13, 9);
       this.colliders.push(rect(sx + 27, h * 0.47, 58, h * 0.12));
     }
-    // the seat he kept, further back
+    // the seat he kept, further back — now using the provided bench asset.
     this.seatPos = new Phaser.Math.Vector2(ww * 0.78 + 46, h * 0.68);
-    g.fillStyle(0x1e2a58, 1);
+    addBusBench(this, ww * 0.78 + 46, h * 0.63, 176, 1);
+    g.fillStyle(0x1e2a58, 0.45);
     g.fillRoundedRect(ww * 0.78, h * 0.44, 60, h * 0.15, 10);
     const glow = this.add
       .image(this.seatPos.x, this.seatPos.y - 6, "seat-glow")
@@ -59,15 +61,12 @@ export default class NaturalBusScene extends BaseScene {
       .setDepth(DEPTH.world);
     this.tweens.add({ targets: glow, alpha: 0.85, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
 
-    // a crowd of soft obstacles
+    // a crowd of soft obstacles, using the provided student NPCs.
+    const npcKeys: NpcArtKey[] = ["boy-1", "girl-1", "boy-2", "girl-2", "boy-3", "girl-3", "boy-4", "girl-4"];
     for (let i = 0; i < 13; i++) {
       const x = ww * 0.14 + Math.random() * ww * 0.58;
       const y = h * (0.62 + Math.random() * 0.24);
-      const body = this.add.graphics();
-      body.fillStyle([0x1c2650, 0x202c5c, 0x182044][i % 3], 1);
-      body.fillEllipse(0, 0, 28, 46);
-      body.fillCircle(0, -28, 10);
-      this.add.container(x, y, [body]).setDepth(DEPTH.world);
+      addStudentNpc(this, npcKeys[i % npcKeys.length], x, y, 62 + (i % 3) * 5, 0.78, i % 2 === 0);
       this.colliders.push(circle(x, y, 15));
     }
 

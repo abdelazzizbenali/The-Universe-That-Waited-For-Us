@@ -9,6 +9,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { rect } from "../systems/world/colliders";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addNpcLine } from "../art/NpcArt";
 
 export default class BottleScene extends BaseScene {
   private companion!: Companion;
@@ -39,11 +40,17 @@ export default class BottleScene extends BaseScene {
     }
     g.fillStyle(0x0d1533, 1);
     g.fillRect(0, h * 0.42, ww, h * 0.58);
-    // their seats
-    g.fillStyle(0x1b2550, 1);
-    g.fillRoundedRect(ww * 0.52, h * 0.46, 150, h * 0.16, 12);
-    g.fillStyle(0x223066, 1);
-    g.fillRoundedRect(ww * 0.52, h * 0.59, 150, h * 0.05, 8);
+    // their seats — bench.png is the actual shared bus bench.
+    addBusBench(this, ww * 0.60, h * 0.66, 194, 1);
+    addNpcLine(
+      this,
+      [
+        { x: ww * 0.22, y: h * 0.68, height: 58, alpha: 0.46 },
+        { x: ww * 0.38, y: h * 0.67, height: 60, alpha: 0.42, flipX: true },
+        { x: ww * 0.82, y: h * 0.69, height: 58, alpha: 0.4 },
+      ],
+      4
+    );
     this.colliders.push(rect(ww * 0.595, h * 0.53, 156, h * 0.18));
 
     this.world.addDust(10, new Phaser.Geom.Rectangle(0, h * 0.1, ww, h * 0.45), 0xbfd9ff, 0.14);

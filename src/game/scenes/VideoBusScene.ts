@@ -9,6 +9,7 @@ import { BaseScene } from "./BaseScene";
 import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { DEPTH, FRAME_LABELS, MEMORY_IDS } from "../config";
+import { addBusBench, addNpcLine } from "../art/NpcArt";
 
 const REC_SECONDS = 8;
 
@@ -45,11 +46,17 @@ export default class VideoBusScene extends BaseScene {
     }
     g.fillStyle(0x120e28, 1);
     g.fillRect(0, h * 0.42, ww, h * 0.58);
-    // their seat, near the back
-    g.fillStyle(0x241c46, 1);
-    g.fillRoundedRect(ww * 0.6, h * 0.5, 150, h * 0.16, 12);
-    g.fillStyle(0x2c2352, 1);
-    g.fillRoundedRect(ww * 0.6, h * 0.62, 150, h * 0.05, 8);
+    // their seat, near the back — the provided bench art is the actual place.
+    addBusBench(this, ww * 0.68, h * 0.67, 196, 1);
+    addNpcLine(
+      this,
+      [
+        { x: ww * 0.2, y: h * 0.68, height: 58, alpha: 0.52 },
+        { x: ww * 0.36, y: h * 0.66, height: 60, alpha: 0.48, flipX: true },
+        { x: ww * 0.5, y: h * 0.69, height: 58, alpha: 0.46 },
+      ],
+      5
+    );
 
     // window light moving past — the bus is going home
     for (let i = 0; i < 5; i++) {

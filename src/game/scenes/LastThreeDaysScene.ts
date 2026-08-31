@@ -17,6 +17,7 @@ import { Player } from "../entities/Player";
 import { Companion } from "../entities/Companion";
 import { HandHoldController } from "../systems/hands/HandHoldController";
 import { DEPTH, MEMORY_IDS } from "../config";
+import { addBusBench, addStudentNpc } from "../art/NpcArt";
 
 type Day = 1 | 2 | 3;
 
@@ -26,7 +27,7 @@ export default class LastThreeDaysScene extends BaseScene {
   private day: Day = 1;
   private sky!: Phaser.GameObjects.Graphics;
   private stageG!: Phaser.GameObjects.Graphics;
-  private crowd: Phaser.GameObjects.Container[] = [];
+  private crowd: (Phaser.GameObjects.Container | Phaser.GameObjects.Image)[] = [];
   private festoon: Phaser.GameObjects.Image[] = [];
   private fog!: Phaser.GameObjects.Image;
   private busy = false;
@@ -96,7 +97,14 @@ export default class LastThreeDaysScene extends BaseScene {
     }
     this.stageG.fillStyle(0x0b1230, 1);
     this.stageG.fillRect(0, h * 0.42, ww, h * 0.58);
-    this.stageG.fillStyle(tintSeat, 1);
+    for (const obj of [
+      addBusBench(this, ww * 0.52, h * 0.68, 196, 0.92),
+      addStudentNpc(this, "boy-2", ww * 0.22, h * 0.68, 58, 0.35),
+      addStudentNpc(this, "girl-3", ww * 0.78, h * 0.68, 58, 0.32, true),
+    ]) {
+      if (obj) this.crowd.push(obj);
+    }
+    this.stageG.fillStyle(tintSeat, 0.35);
     this.stageG.fillRoundedRect(ww * 0.44, h * 0.48, 160, h * 0.16, 12);
   }
 
