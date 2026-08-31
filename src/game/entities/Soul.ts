@@ -32,9 +32,11 @@ export function playerSheet(_kind: SoulKind = "hazel") { return PLAYER_SHEET; }
 export function companionSheet(_kind: SoulKind = "blue") { return COMPANION_SHEET; }
 
 /** Scaling factor against the raw cropped sprite. The cropped character
- *  sprites are around ~250px tall; we size them to ~55 world units for a
- *  comfortable 2.2× zoom framing against a 1408-wide backdrop. */
-const SOUL_SCALE = 0.22;
+ *  sprites are ~340px tall; at 0.24 they become ~82 world units tall
+ *  (~180 screen px at the default 2.2× zoom) — a comfortable readable
+ *  size against the 1408-wide painted backdrops, and correctly scaled
+ *  to match the furniture sprites at the same SCALE value. */
+const SOUL_SCALE = 0.24;
 
 export class Soul {
   readonly kind: SoulKind;
@@ -105,10 +107,10 @@ export class Soul {
   distanceTo(other: Soul) {
     return Phaser.Math.Distance.Between(this.base.x, this.base.y, other.base.x, other.base.y);
   }
-  setPose(pose: SoulPose) {
+  setPose(pose: SoulPose, sink?: number) {
     this.pose = pose;
     if (pose === "stand") this.char.stand();
-    else this.char.sit();
+    else this.char.sit(sink);
   }
   reachToward(x: number, _y: number, amount: number) {
     this.reachTargetAmt = Phaser.Math.Clamp(amount, 0, 1);

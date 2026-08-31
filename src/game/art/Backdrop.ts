@@ -17,6 +17,7 @@ export interface BackdropMood {
   wash?: number;
   washTint?: number;
   drift?: number;
+  zoom?: number;
 }
 
 const BACKDROP_DEPTH = -1000;

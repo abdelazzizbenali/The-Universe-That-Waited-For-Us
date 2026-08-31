@@ -2,7 +2,6 @@
  * never reveal outside the painting. */
 import Phaser from "phaser";
 import { runtime } from "../../runtime";
-import { DEFAULT_ZOOM } from "../settings/Settings";
 
 export class CameraRig {
   private cam: Phaser.Cameras.Scene2D.Camera;

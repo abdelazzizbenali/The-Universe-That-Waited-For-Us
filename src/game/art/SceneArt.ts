@@ -74,47 +74,64 @@ export interface WorldGeom {
 
 export const WORLD_GEOM: Record<string, WorldGeom> = {
   "bg-library": {
-    // Library floor is the entire visible orange-tile area. The top of the
-    // wall meets the floor at ~y=380; image height is 768.
-    floor: { x: 0, y: 370, w: 1407, h: 398 },
+    // The library image is 1407×768. Three bookshelves (brown) sit against
+    // the teal back wall at x≈30-170, 440-585 and 770-915; a teal pillar
+    // stands at the far right (x≈1310-1407). The polished orange tile
+    // floor begins at the wall baseboard around y≈280 and fills the rest
+    // of the room, with bright window-light reflections in the upper
+    // bands. We set the walkable floor slightly below the shelves so the
+    // player can't walk into the back wall or through the pillar.
+    floor: { x: 20, y: 380, w: 1300, h: 378 },
     blockers: [
-      // three bookshelf/wall segments on the back wall
-      { x: 140, y: 280, w: 280, h: 120 },   // left shelves
-      { x: 710, y: 280, w: 280, h: 120 },   // middle shelves
-      { x: 1230, y: 280, w: 170, h: 120 },  // right shelves
+      // Three bookshelf units on the back wall (brown silhouettes against
+      // teal paint). Shelves end at the baseboard ≈ y≈380, so we stop the
+      // blockers just below that so they don't jut into walkable floor.
+      { x: 30,   y: 85, w: 145, h: 295 },
+      { x: 440,  y: 85, w: 150, h: 295 },
+      { x: 770,  y: 85, w: 150, h: 295 },
+      // Right-side teal pillar + partition wall runs the full height.
+      { x: 1305, y: 0,  w: 102, h: 768 },
     ],
     anchors: {
-      // special table (boy already seated on far side, girl's seat near side)
-      specialTable: { x: 990, y: 540 },
-      boySeat:     { x: 990, y: 500 },
-      girlSeat:    { x: 990, y: 585 },
-      // other tables (scattered through the room)
-      tableA: { x: 350, y: 500 },
-      tableB: { x: 620, y: 620 },
-      tableC: { x: 1200, y: 640 },
-      entrance: { x: 60, y: 700 },
+      specialTable: { x: 980, y: 520 },
+      boySeat:      { x: 980, y: 474 },
+      girlSeat:     { x: 980, y: 566 },
+      tableA: { x: 370, y: 520 },
+      tableB: { x: 370, y: 660 },
+      tableC: { x: 980, y: 660 },
+      entrance: { x: 120, y: 700 },
     },
-    entrance: { x: 60, y: 700 },
+    entrance: { x: 120, y: 700 },
   },
   "bg-bus": {
-    // Bus interior — floor is the central aisle between seat rows.
-    floor: { x: 120, y: 230, w: 990, h: 250 },
+    // Bus interior (1221×539) — top-down view. The entire orange-tiled
+    // area is the floor. A teal wall surrounds it; driver's cabin sits
+    // in the top-left corner, and the sliding door is the open pair of
+    // window panes along the top wall just behind the driver. No seats
+    // are painted in — we place them as props during bus scenes.
+    floor: { x: 125, y: 300, w: 1035, h: 230 },
     blockers: [
-      // left seat bank
-      { x: 0, y: 220, w: 200, h: 320 },
-      // right seat bank
-      { x: 1000, y: 220, w: 221, h: 320 },
-      // driver's cabin / windshield up front (left)
-      { x: 0, y: 0, w: 200, h: 220 },
+      // driver's cabin + console + steering wheel (top-left)
+      { x: 80, y: 125, w: 210, h: 200 },
+      // front wall strip (top, left of door)
+      { x: 295, y: 0, w: 50, h: 310 },
+      // back wall strip (top, right of door to pillar)
+      { x: 470, y: 0, w: 680, h: 300 },
+      // rear pillar/wall on the far right
+      { x: 1160, y: 0, w: 61, h: 540 },
+      // bottom wall
+      { x: 0, y: 525, w: 1221, h: 14 },
+      // left wall under driver
+      { x: 0, y: 320, w: 120, h: 220 },
     ],
     anchors: {
-      door: { x: 1080, y: 360 },
-      savedSeat: { x: 320, y: 380 },
-      boySeat: { x: 320, y: 340 },
-      girlSeat: { x: 320, y: 420 },
-      crowdPath: { x: 600, y: 370 },
+      door: { x: 370, y: 320 },       // sliding door (top wall)
+      savedSeat: { x: 600, y: 360 },
+      boySeat: { x: 600, y: 340 },
+      girlSeat: { x: 600, y: 390 },
+      crowdPath: { x: 750, y: 390 },
     },
-    entrance: { x: 1080, y: 360 },
+    entrance: { x: 370, y: 360 },
   },
   "bg-university": {
     // University exterior — ground band runs along the lower half; the
@@ -142,26 +159,31 @@ export const WORLD_GEOM: Record<string, WorldGeom> = {
     entrance: { x: 200, y: 560 },
   },
   "bg-final": {
-    // Final world — walkable field across the lower 2/3.
-    floor: { x: 0, y: 420, w: 1264, h: 423 },
+    // Final world (1264×843). A dirt path winds up a flowered hillside
+    // toward a glowing central clearing (the meeting place). Paintable
+    // ground starts where the foreground grass is fully detailed,
+    // around y≈460; sky + distant mountains lie above.
+    floor: { x: 0, y: 460, w: 1264, h: 383 },
     blockers: [],
     anchors: {
-      start: { x: 120, y: 720 },
-      meeting: { x: 900, y: 520 },
-      horizon: { x: 640, y: 360 },
+      start: { x: 120, y: 780 },
+      meeting: { x: 700, y: 290 },
+      horizon: { x: 640, y: 280 },
     },
-    entrance: { x: 120, y: 720 },
+    entrance: { x: 120, y: 780 },
   },
   "bg-night-hill": {
-    // Night hill — the walkable slope is the lower 2/3, fading upward into
-    // sky. The "hilltop" sits near the upper-center where the blue glow waits.
-    floor: { x: 0, y: 480, w: 1672, h: 461 },
+    // Painted hill (1672×941). Grassy slope fills the lower band of the
+    // painting; misty mountains and starry sky above y≈640 are not
+    // walkable. The player starts in the flower-strewn foreground and
+    // walks up-right toward the crest of the ridge.
+    floor: { x: 0, y: 640, w: 1672, h: 301 },
     anchors: {
-      start: { x: 180, y: 820 },
-      hilltop: { x: 1280, y: 540 },
-      blueLight: { x: 1480, y: 360 },
+      start: { x: 160, y: 880 },
+      hilltop: { x: 1100, y: 780 },
+      blueLight: { x: 1390, y: 790 },
     },
-    entrance: { x: 180, y: 820 },
+    entrance: { x: 160, y: 880 },
   },
 };
 

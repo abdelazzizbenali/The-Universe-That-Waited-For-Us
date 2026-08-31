@@ -1,7 +1,13 @@
 /* FIRST LIBRARY — S5, "The Library of First Words".
  *
  * She walks the library, finds a few quiet things, then sits with him at
- * the special table. Strangers slowly stopped feeling like strangers. */
+ * the special table. Strangers slowly stopped feeling like strangers.
+ *
+ * Furniture is placed against the painted library: four low reading
+ * tables with two chairs each sit in a neat two-by-two grid on the
+ * polished orange tile floor, leaving an aisle to walk between them and
+ * the bookshelves along the back wall.
+ */
 import Phaser from "phaser";
 import { BaseScene } from "./BaseScene";
 import { Player } from "../entities/Player";
@@ -22,16 +28,28 @@ const FRAGMENTS: Record<string, string> = {
 type TableLayout = {
   name: "special" | "A" | "B" | "C";
   x: number; y: number;
-  /** Spawned props */
   tableImg: SpriteProp;
   farChair: SpriteProp;
   nearChair: SpriteProp;
   sheet: "table-1" | "table-2" | "table-3";
 };
 
-const CHAR_SCALE = 0.22;
-const TABLE_SCALE = 0.14;
-const CHAIR_SCALE = 0.16;
+/* One scale for every sprite (characters, tables, chairs). The assets
+ * were painted in a single style and their cropped proportions are
+ * preserved exactly; the collision/placement offsets below are scaled
+ * with them. */
+const SCALE = 0.24;
+
+/* Measured from the cropped source sprites at scale 1 (in source px):
+ *   chair-front seat ≈ 70 px from ground → sits at pos.y - 70*SCALE
+ *   table-1 tabletop ≈ 79 px from ground → sits at pos.y - 79*SCALE
+ * The chair seat is slightly LOWER than the tabletop, which matches the
+ * chabudai-style low reading tables. */
+const CHAIR_SURFACE_SRC = 70; // seat height in SOURCE pixels
+const TABLE_SURFACE_SRC = 80; // tabletop height in SOURCE pixels
+/* Distance (world px) from table centre to chair centre — enough gap
+ * that the chair legs clear the table's apron visually. */
+const CHAIR_OFFSET = 46;
 
 export default class LibraryScene extends BaseScene {
   private companion!: Companion;
@@ -48,70 +66,98 @@ export default class LibraryScene extends BaseScene {
   build() {
     const geom = this.useWorldSpace()!;
     const floor = geom.floor;
-    const anchors = geom.anchors!;
 
     // warm dust in the window light
     addMotes(
       this,
-      new Phaser.Geom.Rectangle(floor.x, floor.y - 80, floor.w, floor.h),
-      36,
+      new Phaser.Geom.Rectangle(floor.x, floor.y, floor.w, floor.h),
+      44,
       0xf4e3c0,
       0.28
     );
 
-    // four tables — exactly four. The special table is anchored from the
-    // blueprint as "where it happened"; three others fill the room so she
-    // can walk between them.
-    const plans: Array<{ name: TableLayout["name"]; x: number; y: number; sheet: TableLayout["sheet"]; hasStudents?: boolean; studentSheet?: string }> = [
-      { name: "special", x: anchors.specialTable.x, y: anchors.specialTable.y, sheet: "table-1" },
-      { name: "A", x: anchors.tableA.x, y: anchors.tableA.y, sheet: "table-2", hasStudents: true, studentSheet: "boy-2" },
-      { name: "B", x: anchors.tableB.x, y: anchors.tableB.y, sheet: "table-3", hasStudents: true, studentSheet: "girl-2" },
-      { name: "C", x: anchors.tableC.x, y: anchors.tableC.y, sheet: "table-2" },
+    /* Four tables arranged as a neat 2×2 cluster in the middle of the
+     * room, with an aisle between them that the player can walk. The
+     * "special" table sits in the sunbeam under the right window (as the
+     * fragment says — "the light kept finding the same table first"). */
+    const plans: Array<{
+      name: TableLayout["name"];
+      x: number; y: number;
+      sheet: TableLayout["sheet"];
+      student?: { sheet: string; side: "far" | "near" };
+    }> = [
+      { name: "A",       x: 370,  y: 520, sheet: "table-2", student: { sheet: "boy-2",  side: "far" } },
+      { name: "special", x: 980,  y: 520, sheet: "table-1", /* him sits far; her seat is near */ },
+      { name: "B",       x: 370,  y: 660, sheet: "table-3", student: { sheet: "girl-2", side: "far" } },
+      { name: "C",       x: 980,  y: 660, sheet: "table-2" },
     ];
     for (const plan of plans) {
-      const tableImg = new SpriteProp(this, plan.x, plan.y, plan.sheet, { scale: TABLE_SCALE });
-      const farChair = new SpriteProp(this, plan.x - 2, plan.y - 30, "chair-back", { scale: CHAIR_SCALE });
-      const nearChair = new SpriteProp(this, plan.x - 2, plan.y + 30, "chair-front", { scale: CHAIR_SCALE });
+      const tableImg = new SpriteProp(this, plan.x, plan.y, plan.sheet, {
+        scale: SCALE,
+        surfaceFromGround: TABLE_SURFACE_SRC,
+      });
+      // far chair (back of chair visible, above table in world-y) and near
+      // chair (front of chair visible, below table).
+      const farChair = new SpriteProp(this, plan.x, plan.y - CHAIR_OFFSET, "chair-back", {
+        scale: SCALE,
+        surfaceFromGround: CHAIR_SURFACE_SRC,
+        // far chair is further from the viewer so sort it BEHIND the table
+        depth: DEPTH.props - 1.2,
+      });
+      const nearChair = new SpriteProp(this, plan.x, plan.y + CHAIR_OFFSET, "chair-front", {
+        scale: SCALE,
+        surfaceFromGround: CHAIR_SURFACE_SRC,
+        // near chair is closer to the viewer so sort it IN FRONT of the table
+        depth: DEPTH.props + 1.2,
+      });
       const layout: TableLayout = {
         name: plan.name, x: plan.x, y: plan.y, tableImg, farChair, nearChair, sheet: plan.sheet,
       };
       this.tables.push(layout);
-      // table collision — a tight box around the tabletop
-      this.colliders.push(rect(plan.x, plan.y, 70, 22));
-      // chair collision (only the far chair when someone sits there is solid;
-      // near chair is "her" seat and starts free; both chairs get gentle
-      // collision so she can't simply walk through them).
-      this.colliders.push(rect(plan.x - 2, plan.y - 30, 28, 22));
-      if (plan.hasStudents) {
-        const student = new SpriteChar(this, plan.x - 2, plan.y - 30, plan.studentSheet ?? "boy-3", { scale: CHAR_SCALE });
-        student.sit();
+
+      // Collision: a tight box around each tabletop so you can't walk
+      // through it, plus both chairs. Width/height use the measured
+      // scaled dimensions.
+      const tW = tableImg.displayWidth * 0.86; // slight inset from outer legs
+      this.colliders.push(rect(plan.x, plan.y, tW, 16));
+      const cW = nearChair.displayWidth * 0.7;
+      this.colliders.push(rect(plan.x, plan.y - CHAIR_OFFSET, cW, 14));
+      this.colliders.push(rect(plan.x, plan.y + CHAIR_OFFSET, cW, 14));
+
+      if (plan.student) {
+        const sx = plan.x;
+        const sy = plan.y + (plan.student.side === "far" ? -CHAIR_OFFSET : CHAIR_OFFSET);
+        const student = new SpriteChar(this, sx, sy, plan.student.sheet, { scale: SCALE });
+        student.sit(CHAIR_SURFACE_SRC); // raise hips onto the seat
         student.update(0);
         this.students.push(student);
-        // keep the near chair free but occupied by a bag/book visually —
-        // (we leave it as chair-front; players cannot sit there since the
-        // interaction only exists on the special table.)
       }
     }
     this.special = this.tables.find((t) => t.name === "special")!;
 
-    // him — starts near the entrance, walks to his seat on the far side of
-    // the special table, then sits and waits.
-    this.companion = new Companion(this, anchors.entrance.x, anchors.entrance.y);
+    // him — starts near the entrance, walks to the FAR chair of the
+    // special table and sits down to wait.
+    this.companion = new Companion(this, 180, 720);
     this.companion.setState("distant");
-    this.companion.moveTo(this.special.x + 2, this.special.y - 28);
+    this.companion.moveTo(this.special.x, this.special.y - CHAIR_OFFSET + 4);
+    // once he arrives, place him into a seated pose
+    this.time.delayedCall(600, () => {
+      // Companion's "seated" state handles pose; set in tick() when close.
+    });
 
-    // her
-    this.player = new Player(this, anchors.entrance.x + 40, anchors.entrance.y);
-    this.player.bounds = new Phaser.Geom.Rectangle(floor.x, floor.y, floor.w, floor.h);
+    // her — enters from the left side of the room (near the pillar)
+    this.player = new Player(this, 120, 700);
+    this.player.bounds = new Phaser.Geom.Rectangle(floor.x + 20, floor.y + 10, floor.w - 40, floor.h - 30);
     this.rig.follow(this.player.soul.container, 0.08);
 
-    // discoverables
+    // discoverables — scattered across the room where the paintings
+    // suggest them.
     const spots: { id: string; x: number; y: number; label: string }[] = [
-      { id: "book",   x: 720,  y: 470, label: "a book" },
-      { id: "table",  x: this.special.x - 42, y: this.special.y + 4, label: "the table" },
-      { id: "chair",  x: this.special.x + 8,  y: this.special.y + 56, label: "a chair" },
-      { id: "window", x: 1020, y: 420, label: "the window" },
-      { id: "corner", x: 200,  y: 620, label: "the quiet corner" },
+      { id: "book",   x: 370, y: 520 - 4, label: "a book" },            // on table A
+      { id: "table",  x: this.special.x - 36, y: this.special.y, label: "the table" },
+      { id: "chair",  x: this.special.x + 6,  y: this.special.y + CHAIR_OFFSET + 10, label: "a chair" },
+      { id: "window", x: 1020, y: 460, label: "the window" },           // right window sunbeam
+      { id: "corner", x: 100,  y: 680, label: "the quiet corner" },     // bottom-left corner
     ];
     for (const s of spots) {
       const marker = this.add
@@ -140,15 +186,17 @@ export default class LibraryScene extends BaseScene {
       });
     }
 
+    // "sit with him" interaction — anchored to the near chair of the
+    // special table.
     this.interactables.push({
       id: "sit-together",
-      x: this.special.x + 2,
-      y: this.special.y + 50,
-      r: 64,
+      x: this.special.x,
+      y: this.special.y + CHAIR_OFFSET + 2,
+      r: 70,
       label: "sit with him",
       once: true,
       when: () => this.found.size >= 3 && !this.sitting,
-      onUse: () => void this.sitTogether(this.special.x + 2, this.special.y + 40),
+      onUse: () => void this.sitTogether(this.special.x, this.special.y + CHAIR_OFFSET - 2),
     });
 
     // warm vignette that grows as she notices things
@@ -183,14 +231,17 @@ export default class LibraryScene extends BaseScene {
 
   protected tick(dt: number, tSec: number) {
     this.companion.update(dt, tSec, this.p.pos, this.colors);
-    if (!this.seated && this.companion.distanceToPlayer(new Phaser.Math.Vector2(this.special.x + 2, this.special.y - 28)) < 12) {
+    // When he reaches his seat across the special table, drop him into
+    // the seated pose.
+    if (!this.seated && this.companion.distanceToPlayer(new Phaser.Math.Vector2(this.special.x, this.special.y - CHAIR_OFFSET + 4)) < 14) {
       this.seated = true;
       this.companion.setState("seated");
     }
     if (this.seated && !this.sitting) {
       this.companion.soul.lookAt(this.p.pos.x, this.p.pos.y);
     }
-    // depth-sort props and students each frame
+    // depth-sort props and students each frame (chairs/table are already
+    // at offset depths; SpriteChar's depthSort handles y-ordering).
     for (const s of this.students) s.update(dt);
     for (const t of this.tables) {
       t.tableImg.depthSort();

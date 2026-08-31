@@ -5,7 +5,7 @@ import Phaser from "phaser";
 import { runtime } from "../runtime";
 import { session } from "../systems/session/Session";
 import { DEPTH } from "../config";
-import { Backdrop, type Mode as BackdropMode } from "../art/Backdrop";
+import { Backdrop } from "../art/Backdrop";
 import { SCENE_ART, WORLD_GEOM, type WorldGeom } from "../art/SceneArt";
 import { InputAdapter } from "../systems/input/InputAdapter";
 import { CameraRig } from "../systems/camera/CameraRig";

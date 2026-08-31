@@ -28,16 +28,15 @@ export interface SpriteCharOptions {
 
 /** Crops a single character/prop texture on first use so we don't carry
  *  around a 1408x768 mostly-empty canvas at runtime. */
-const cropCache = new Map<string, { key: string; feetOffsetY: number; baseHeight: number; baseWidth: number }>();
+const cropCache = new Map<string, { key: string; baseHeight: number; baseWidth: number }>();
 
-function ensureCrop(scene: Phaser.Scene, srcKey: string): { key: string; feetOffsetY: number; baseHeight: number; baseWidth: number } {
+function ensureCrop(scene: Phaser.Scene, srcKey: string): { key: string; baseHeight: number; baseWidth: number } {
   if (cropCache.has(srcKey)) return cropCache.get(srcKey)!;
   const tex = scene.textures.get(srcKey);
   const img = tex.getSourceImage() as HTMLImageElement;
   const tw = tex.get().width as number;
   const th = tex.get().height as number;
 
-  // Render to an offscreen canvas, sample non-transparent bounds.
   const canvas = document.createElement("canvas");
   canvas.width = tw;
   canvas.height = th;
@@ -47,14 +46,12 @@ function ensureCrop(scene: Phaser.Scene, srcKey: string): { key: string; feetOff
   try {
     data = ctx.getImageData(0, 0, tw, th);
   } catch {
-    // If CORS/tainted, fall back to a sensible centered crop.
-    const fallback = { key: srcKey, feetOffsetY: th * 0.9, baseHeight: th * 0.5, baseWidth: tw * 0.3 };
+    const fallback = { key: srcKey, baseHeight: th * 0.5, baseWidth: tw * 0.3 };
     cropCache.set(srcKey, fallback);
     return fallback;
   }
   const px = data.data;
   let minX = tw, minY = th, maxX = 0, maxY = 0;
-  // Scan every 2nd pixel for performance.
   for (let y = 0; y < th; y += 2) {
     for (let x = 0; x < tw; x += 2) {
       const a = px[(y * tw + x) * 4 + 3];
@@ -67,7 +64,7 @@ function ensureCrop(scene: Phaser.Scene, srcKey: string): { key: string; feetOff
     }
   }
   if (maxX <= minX || maxY <= minY) {
-    const fallback = { key: srcKey, feetOffsetY: th * 0.9, baseHeight: th * 0.5, baseWidth: tw * 0.3 };
+    const fallback = { key: srcKey, baseHeight: th * 0.5, baseWidth: tw * 0.3 };
     cropCache.set(srcKey, fallback);
     return fallback;
   }
@@ -86,10 +83,11 @@ function ensureCrop(scene: Phaser.Scene, srcKey: string): { key: string; feetOff
   octx.drawImage(canvas, minX, minY, cw, ch, 0, 0, cw, ch);
   const croppedKey = `crop:${srcKey}`;
   scene.textures.addCanvas(croppedKey, out);
-  // feetOffsetY is the y of the foot-line inside the cropped frame: the
-  // character's feet sit near maxY-minY (the bottom of the cropped image).
-  const feetOffsetY = ch - 2; // tiny buffer above bottom edge
-  const info = { key: croppedKey, feetOffsetY, baseHeight: ch, baseWidth: cw };
+  // After the crop the feet / ground-contact of the sprite sit at the
+  // bottom edge of the image (we padded only 6 px below maxY and the
+  // art has negligible shadow/ground gap), so setting origin=(0.5,1)
+  // and sprite.y=0 places the figure's feet exactly at container y=0.
+  const info = { key: croppedKey, baseHeight: ch, baseWidth: cw };
   cropCache.set(srcKey, info);
   return info;
 }
@@ -102,10 +100,12 @@ export class SpriteChar {
   private baseHeight: number;
   private baseWidth: number;
   pos: Phaser.Math.Vector2;
-  private facing: Dir = "right";
   private bobT = Math.random() * Math.PI * 2;
   private walking = false;
-  private poseY = 0; // sitting offsets etc.
+  /** How many SOURCE pixels to lift the sprite upward from the ground
+   *  line (0 = feet planted on ground; positive = figure sits/stands
+   *  higher — e.g. on a chair seat). */
+  private liftPx = 0;
   private scaleMul = 1;
 
   constructor(scene: Phaser.Scene, x: number, y: number, srcKey: string, opts: SpriteCharOptions = {}) {
@@ -114,11 +114,14 @@ export class SpriteChar {
     this.baseHeight = info.baseHeight;
     this.baseWidth = info.baseWidth;
 
-    this.shadow = scene.add.ellipse(0, 0, this.baseWidth * 0.45, this.baseHeight * 0.09, 0x000000, 0.35);
+    this.shadow = scene.add.ellipse(0, 2, this.baseWidth * 0.45, this.baseHeight * 0.09, 0x000000, 0.35);
     this.shadow.setDepth(DEPTH.groundShadow);
 
-    this.sprite = scene.add.image(0, -(info.feetOffsetY), info.key);
-    this.sprite.setOrigin(0.5, 1); // feet on the container's y=0 line
+    // Origin (0.5, 1) → bottom-center of image is the anchor point.
+    // sprite.y=0 places that anchor at container y=0 (the ground), so
+    // feet are exactly on the floor.
+    this.sprite = scene.add.image(0, 0, info.key);
+    this.sprite.setOrigin(0.5, 1);
     if (opts.tint !== undefined) this.sprite.setTint(opts.tint);
 
     this.container = scene.add.container(x, y, [this.shadow, this.sprite]);
@@ -134,7 +137,6 @@ export class SpriteChar {
   }
 
   setFacing(dir: Dir) {
-    this.facing = dir;
     this.sprite.setFlipX(dir === "left");
   }
 
@@ -145,15 +147,15 @@ export class SpriteChar {
     this.sprite.clearTint();
   }
 
-  /** Sit on a chair — drop a touch and shrink slightly to look seated. */
-  sit() {
-    this.poseY = 12;
-    this.sprite.y = -(this.baseHeight * 0.6); // shift up so feet don't pierce
+  /** Sit on a chair — lift the figure so the hips land at seat height
+   *  (in SOURCE pixels, measured from the ground up). For our low
+   *  library chairs seatFromGround ≈ 70 src-px; passing that value
+   *  raises the figure exactly onto the chair. */
+  sit(seatFromGround: number = 70) {
+    this.liftPx = seatFromGround;
   }
   stand() {
-    this.poseY = 0;
-    const info = Array.from(cropCache.values()).find((c) => c.key === this.sprite.texture.key);
-    this.sprite.y = info ? -info.feetOffsetY : -(this.baseHeight);
+    this.liftPx = 0;
   }
 
   setWalking(v: boolean) {
@@ -173,14 +175,13 @@ export class SpriteChar {
     if (this.walking) {
       this.bobT += dtSec * 9;
       const bob = Math.abs(Math.sin(this.bobT)) * 2.2;
-      this.sprite.y = -this.baseHeight + bob;
+      // bob goes up (negative y = up in Phaser)
+      this.sprite.y = -(this.liftPx + bob);
     } else {
-      // gentle idle breath
       this.bobT += dtSec * 1.6;
       const bob = Math.sin(this.bobT) * 0.6;
-      this.sprite.y = -this.baseHeight + this.poseY + bob;
+      this.sprite.y = -(this.liftPx + bob);
     }
-    // shadow stays on ground regardless of bob
     this.shadow.setPosition(0, 2);
     this.container.setPosition(this.pos.x, this.pos.y);
     this.depthSort();
@@ -204,16 +205,25 @@ export class SpriteProp {
   pos: Phaser.Math.Vector2;
   baseHeight: number;
   baseWidth: number;
+  /** Height from ground to the top surface (tabletop / chair seat) in
+   *  source pixels. Used to place things on top, and to sit characters at
+   *  the correct height. */
+  surfaceFromGround: number;
   private scaleMul = 1;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, srcKey: string, opts: { scale?: number; depth?: number; originY?: number } = {}) {
+  constructor(scene: Phaser.Scene, x: number, y: number, srcKey: string, opts: { scale?: number; depth?: number; surfaceFromGround?: number } = {}) {
     const info = ensureCrop(scene, srcKey);
     this.baseHeight = info.baseHeight;
     this.baseWidth = info.baseWidth;
     this.scaleMul = opts.scale ?? 1;
+    // Default: assume the top opaque row is the prop's top surface. This is
+    // correct for tables and chairs where the visible top sits near the
+    // bottom of the crop (because feetOffsetY = ch-2 places the ground at
+    // the bottom). The caller can override for odd props.
+    this.surfaceFromGround = opts.surfaceFromGround ?? info.baseHeight - 8;
     this.shadow = scene.add.ellipse(0, 2, info.baseWidth * 0.45, info.baseHeight * 0.08, 0x000000, 0.3);
     this.shadow.setDepth(DEPTH.groundShadow);
-    this.sprite = scene.add.image(0, -(info.feetOffsetY), info.key).setOrigin(0.5, 1);
+    this.sprite = scene.add.image(0, 0, info.key).setOrigin(0.5, 1);
     this.sprite.setScale(this.scaleMul);
     this.shadow.setScale(this.scaleMul);
     this.container = scene.add.container(x, y, [this.shadow, this.sprite]);
@@ -228,6 +238,11 @@ export class SpriteProp {
   }
 
   setTint(t: number) { this.sprite.setTint(t); }
+
+  /** World-space y of the top surface (scaled). */
+  get surfaceY() { return this.pos.y - this.surfaceFromGround * this.scaleMul; }
+  /** World-space width of the prop. */
+  get displayWidth() { return this.baseWidth * this.scaleMul; }
 
   depthSort() {
     this.container.setDepth(DEPTH.props + Math.max(0, this.pos.y) * 0.005 - 0.5);
