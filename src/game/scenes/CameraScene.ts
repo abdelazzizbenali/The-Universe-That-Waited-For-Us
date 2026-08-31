@@ -98,13 +98,18 @@ export default class CameraScene extends BaseScene {
     ]);
 
     /* the camera becomes a tool: look for what the world hides */
+    const aimY = this.scale.height * 0.68;
     const targets: CameraTarget[] = [
-      { id: "hidden-star", x: this.scale.width * 1.2, y: this.scale.height * 0.2, label: "a star only the camera found" },
-      { id: "window-sky", x: this.scale.width * 0.6, y: this.scale.height * 0.22, label: "the sky in a shop window" },
-      { id: "lamp-road", x: this.scale.width * 1.6, y: this.scale.height * 0.34, label: "a lamp on the road home" },
+      // These targets must be frameable by the actual follow camera. They sit on
+      // the walkable street line, not up on the wall, so walking to each glow and
+      // pressing capture always advances the memory.
+      { id: "window-sky", x: this.scale.width * 0.58, y: aimY, label: "the sky reflected in a shop window" },
+      { id: "hidden-star", x: this.scale.width * 1.08, y: aimY, label: "a star only the camera found" },
+      { id: "lamp-road", x: this.scale.width * 1.55, y: aimY, label: "a lamp on the road home" },
     ];
     this.cam = new MemoryCamera(this, this.ui, this.audio, {
       onCapture: (t) => void this.onCapture(t),
+      onMiss: () => this.ui.setHint("walk until the brackets turn green, then capture"),
       onToggle: (active) => {
         this.uiLocked = active;
         if (!active) this.ui.setHint("press the camera button to look again");
@@ -114,7 +119,7 @@ export default class CameraScene extends BaseScene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cam.destroy());
 
     this.player!.setFrozen(false);
-    this.ui.setHint("press the camera button — then capture three things");
+    this.ui.setHint("press the camera button — walk to each glow and capture when the brackets turn green");
     // the camera button lives in the world: walking to it toggles the viewfinder
     this.interactables.push({
       id: "camera-toggle",
