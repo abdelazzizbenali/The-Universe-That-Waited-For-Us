@@ -1,10 +1,8 @@
 /* Backdrop — painted environment art as an actual world-space layer.
 
-   Earlier prototype versions cover-fitted the art to the viewport like a UI
-   wallpaper. The production pass uses the paintings as real environments:
-   origin at world (0,0), camera-scrollable, never stretched, and with camera
-   bounds available to scenes. Grading veils remain screen-space so day/night
-   moods stay consistent at any zoom. */
+   The art is fitted to each scene's authored playable rectangle. That keeps
+   backgrounds from appearing giant, prevents camera black/blue edges, and makes
+   collision/interactable coordinates line up with what the player sees. */
 import Phaser from "phaser";
 
 export interface BackdropMood {
@@ -64,7 +62,6 @@ export class Backdrop {
   private wash: Phaser.GameObjects.Rectangle | null = null;
   readonly width: number;
   readonly height: number;
-  private artScale: number;
 
   constructor(
     private scene: Phaser.Scene,
@@ -73,17 +70,18 @@ export class Backdrop {
     _reduced = false
   ) {
     const { tint, darken = 0, wash = 0, washTint = 0x93dcbb } = mood;
-    const src = scene.textures.get(key).getSourceImage() as HTMLImageElement | HTMLCanvasElement;
-    const sw = src.width || 1280;
-    const sh = src.height || 720;
     const viewportW = scene.scale.width || 960;
     const viewportH = scene.scale.height || 540;
     const desiredW = viewportW * (SCENE_WIDTH_SCALE[scene.scene.key] ?? 1);
-    this.artScale = Math.max(1, desiredW / sw, viewportH / sh);
-    this.width = sw * this.artScale;
-    this.height = sh * this.artScale;
+    this.width = desiredW;
+    this.height = viewportH;
 
-    this.img = scene.add.image(0, 0, key).setOrigin(0, 0).setScrollFactor(1).setScale(this.artScale).setDepth(BACKDROP_DEPTH);
+    this.img = scene.add
+      .image(0, 0, key)
+      .setOrigin(0, 0)
+      .setScrollFactor(1)
+      .setDisplaySize(this.width, this.height)
+      .setDepth(BACKDROP_DEPTH);
     if (tint !== undefined) this.img.setTint(tint);
 
     this.veil = scene.add

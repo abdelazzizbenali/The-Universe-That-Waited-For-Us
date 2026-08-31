@@ -102,15 +102,15 @@ export default class LibraryScene extends BaseScene {
       this.colliders.push(rect(sx + ww * 0.065, hh * 0.34, ww * 0.13, hh * 0.4));
     }
 
-    // Exactly four small physical tables. The special story table is center-right
-    // with HER SEAT on the near side, adjacent to him but not against an edge.
-    this.tablePos = new Phaser.Math.Vector2(ww * 0.62, hh * 0.6);
+    // Four readable table groups using the provided table art. They are sized
+    // to match the characters and the room, with clear aisles between them.
+    this.tablePos = new Phaser.Math.Vector2(ww * 0.60, hh * 0.62);
     const t = this.tablePos;
     const tables = [
-      { key: "trim-table-1", x: t.x, y: t.y, w: 132, h: 61, special: true },
-      { key: "trim-table-2", x: ww * 0.30, y: hh * 0.66, w: 118, h: 56 },
-      { key: "trim-table-3", x: ww * 0.48, y: hh * 0.78, w: 118, h: 52 },
-      { key: "trim-table-1", x: ww * 0.80, y: hh * 0.76, w: 112, h: 52 },
+      { key: "trim-table-1", x: t.x, y: t.y, w: 220, h: 102, special: true },
+      { key: "trim-table-2", x: ww * 0.25, y: hh * 0.69, w: 188, h: 88 },
+      { key: "trim-table-3", x: ww * 0.43, y: hh * 0.82, w: 184, h: 82 },
+      { key: "trim-table-1", x: ww * 0.80, y: hh * 0.78, w: 190, h: 88 },
     ];
     for (const table of tables) {
       if (this.textures.exists(table.key)) {
@@ -121,7 +121,7 @@ export default class LibraryScene extends BaseScene {
         g.fillStyle(0x243064, 1);
         g.fillRoundedRect(table.x - table.w / 2, table.y - table.h / 2, table.w, table.h, 10);
       }
-      this.colliders.push(rect(table.x, table.y, table.w * 0.9, table.h * 0.72));
+      this.colliders.push(rect(table.x, table.y, table.w * 0.86, table.h * 0.62));
     }
     const chair = (key: string, x: number, y: number, hgt = 44) => {
       if (this.textures.exists(key)) {
@@ -132,11 +132,11 @@ export default class LibraryScene extends BaseScene {
         g.fillRoundedRect(x - 17, y - hgt, 34, 30, 8);
       }
     };
-    chair("trim-chair-back", t.x + 47, t.y - 28, 42); // his chair / far side
-    chair("trim-chair-front", t.x + 47, t.y + 76, 46); // HER SEAT / near side
-    chair("trim-chair-front", ww * 0.30, hh * 0.73, 42);
-    chair("trim-chair-back", ww * 0.48, hh * 0.72, 42);
-    chair("trim-chair-front", ww * 0.80, hh * 0.83, 42);
+    chair("trim-chair-back", t.x + 58, t.y - 48, 58); // his chair / far side
+    chair("trim-chair-front", t.x + 58, t.y + 104, 62); // HER SEAT / near side
+    chair("trim-chair-front", ww * 0.25, hh * 0.78, 56);
+    chair("trim-chair-back", ww * 0.43, hh * 0.76, 54);
+    chair("trim-chair-front", ww * 0.80, hh * 0.88, 56);
 
     // dust in the sunlight
     this.world.addDust(26, new Phaser.Geom.Rectangle(ww * 0.55, hh * 0.12, ww * 0.42, hh * 0.6), 0xf4e3c0, 0.3);
@@ -144,8 +144,8 @@ export default class LibraryScene extends BaseScene {
 
     // quiet students are present but not in the important path.
     for (const s of [
-      { key: "trim-girl-4", x: ww * 0.29, y: hh * 0.73 },
-      { key: "trim-boy-4", x: ww * 0.80, y: hh * 0.83 },
+      { key: "trim-girl-4", x: ww * 0.25, y: hh * 0.78 },
+      { key: "trim-boy-4", x: ww * 0.80, y: hh * 0.88 },
     ]) {
       if (this.textures.exists(s.key)) {
         const img = this.add.image(s.x, s.y, s.key).setOrigin(0.5, 1).setDisplaySize(36, 78).setDepth(DEPTH.soul + s.y / 1000).setAlpha(0.86);
@@ -154,21 +154,21 @@ export default class LibraryScene extends BaseScene {
     }
 
     // him — he finds the table and waits
-    this.companion = new Companion(this, ww * 0.55, hh * 0.8);
+    this.companion = new Companion(this, ww * 0.52, hh * 0.82);
     this.companion.setState("distant");
-    this.companion.moveTo(t.x + 47, t.y - 42);
+    this.companion.moveTo(t.x + 58, t.y - 62);
 
     // her
-    this.player = new Player(this, ww * 0.08, hh * 0.78);
-    this.player.bounds = new Phaser.Geom.Rectangle(ww * 0.03, hh * 0.56, ww * 0.94, hh * 0.38);
+    this.player = new Player(this, ww * 0.08, hh * 0.8);
+    this.player.bounds = new Phaser.Geom.Rectangle(ww * 0.03, hh * 0.54, ww * 0.94, hh * 0.42);
     this.rig.follow(this.player.soul.container, 0.08, 1);
     this.rig.setBounds(0, 0, ww, hh);
 
     // discoverables — each a small warm marker until found
     const spots: { id: string; x: number; y: number; label: string }[] = [
       { id: "book", x: shelfXs[1] + ww * 0.065, y: hh * 0.58, label: "a book" },
-      { id: "table", x: t.x - 110, y: t.y + 8, label: "the table" },
-      { id: "chair", x: t.x + 47, y: t.y + 62, label: "a chair" },
+      { id: "table", x: t.x - 138, y: t.y + 12, label: "the table" },
+      { id: "chair", x: t.x + 58, y: t.y + 86, label: "a chair" },
       { id: "window", x: ww * 0.72, y: hh * 0.52, label: "the window" },
       { id: "corner", x: ww * 0.11, y: hh * 0.7, label: "the quiet corner" },
     ];
@@ -205,13 +205,13 @@ export default class LibraryScene extends BaseScene {
     // sitting with him — unlocked by discovery
     this.interactables.push({
       id: "sit-together",
-      x: t.x + 47,
-      y: t.y + 56,
-      r: 58,
+      x: t.x + 58,
+      y: t.y + 88,
+      r: 66,
       label: "sit with him",
       once: true,
       when: () => this.found.size >= 3 && !this.sitting,
-      onUse: () => void this.sitTogether(t.x + 47, t.y + 50),
+      onUse: () => void this.sitTogether(t.x + 58, t.y + 82),
     });
 
     // cool, peaceful, slightly distant — warmth arrives with discovery
@@ -243,7 +243,7 @@ export default class LibraryScene extends BaseScene {
 
   protected tick(dt: number, tSec: number) {
     this.companion.update(dt, tSec, this.p.pos, this.colors);
-    if (!this.seated && this.companion.distanceToPlayer(new Phaser.Math.Vector2(this.tablePos.x + 47, this.tablePos.y - 42)) < 9) {
+    if (!this.seated && this.companion.distanceToPlayer(new Phaser.Math.Vector2(this.tablePos.x + 58, this.tablePos.y - 62)) < 9) {
       this.seated = true;
       this.companion.setState("seated");
     }
@@ -264,7 +264,7 @@ export default class LibraryScene extends BaseScene {
     this.ui.letterbox(true);
     this.audio.duckBed("library", 0.014, 3);
     this.audio.settle();
-    this.rig.focusPull(this.tablePos.x + 40, this.tablePos.y - 4, 1.16, 1400);
+    this.rig.focusPull(this.tablePos.x + 48, this.tablePos.y + 8, 1.1, 1400);
     this.p.soul.setWarmth(0.6);
     this.companion.soul.setIntensity(1.45);
     this.companion.soul.setWarmth(0.5);
@@ -273,7 +273,7 @@ export default class LibraryScene extends BaseScene {
     this.colors.setStage(2);
     this.saves.setColorStage(2);
     const seam = this.add
-      .image(this.tablePos.x + 47, this.tablePos.y - 2, "aura-our")
+      .image(this.tablePos.x + 58, this.tablePos.y + 14, "aura-our")
       .setBlendMode(Phaser.BlendModes.ADD)
       .setScale(0.5)
       .setAlpha(0)

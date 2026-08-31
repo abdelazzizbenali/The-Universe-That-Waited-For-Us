@@ -1,14 +1,13 @@
-/* CameraRig — smooth follow and emotional focus, now driven by the production
-   gameplay zoom setting. Default zoom is intentionally close enough for the
-   character art to read on phone landscape while camera bounds prevent seeing
-   beyond the painted environment. */
+/* CameraRig — smooth follow and emotional focus. The gameplay zoom is kept
+   close to 1:1 so the provided backgrounds, furniture, and playable areas read
+   at their intended proportions instead of feeling oversized. */
 import Phaser from "phaser";
 import { runtime } from "../../runtime";
 
 export class CameraRig {
   private cam: Phaser.Cameras.Scene2D.Camera;
   private followTarget: Phaser.GameObjects.Container | null = null;
-  private lerp = 0.085;
+  private lerp = 0.11;
   private baseZoom = 1;
 
   constructor(private scene: Phaser.Scene) {
@@ -16,7 +15,7 @@ export class CameraRig {
   }
 
   private gameplayZoom() {
-    return runtime.settings?.zoom ?? 2.2;
+    return runtime.settings?.zoom ?? 1.08;
   }
 
   private z(relativeZoom: number) {
@@ -29,7 +28,7 @@ export class CameraRig {
     return runtime.settings ? runtime.settings.duration(ms) : ms;
   }
 
-  follow(target: Phaser.GameObjects.Container, lerp = 0.085, zoom = 1) {
+  follow(target: Phaser.GameObjects.Container, lerp = 0.11, zoom = 1) {
     this.followTarget = target;
     this.lerp = lerp;
     this.baseZoom = zoom;

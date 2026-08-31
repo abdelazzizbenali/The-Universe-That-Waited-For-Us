@@ -12,7 +12,7 @@ export interface SettingsState {
 
 const KEY = "utwfu.settings.v1";
 
-export const DEFAULT_CAMERA_ZOOM = 2.2;
+export const DEFAULT_CAMERA_ZOOM = 1.08;
 
 const DEFAULTS: SettingsState = {
   master: 0.85,
@@ -48,7 +48,11 @@ export class Settings {
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return { ...DEFAULTS };
-      return { ...DEFAULTS, ...(JSON.parse(raw) as Partial<SettingsState>) };
+      const saved = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<SettingsState>) };
+      // Earlier builds exposed an over-zoomed camera range. Reset those saved
+      // values so returning players get the corrected scene proportions.
+      if (!Number.isFinite(saved.zoom) || saved.zoom > 1.45 || saved.zoom < 0.85) saved.zoom = DEFAULT_CAMERA_ZOOM;
+      return saved;
     } catch {
       return { ...DEFAULTS };
     }
@@ -85,7 +89,7 @@ export class Settings {
   }
 
   get zoom() {
-    return PhaserSafeClamp(this.state.zoom || DEFAULT_CAMERA_ZOOM, 1.35, 3.2);
+    return PhaserSafeClamp(this.state.zoom || DEFAULT_CAMERA_ZOOM, 0.9, 1.45);
   }
 
   /** Scales camera/zoom movement amounts. */

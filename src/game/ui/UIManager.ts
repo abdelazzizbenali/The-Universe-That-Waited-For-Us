@@ -116,7 +116,7 @@ export class UIManager {
           <label class="set-row"><span>effects</span>
             <input id="set-fx" type="range" min="0" max="100" step="1" /></label>
           <label class="set-row"><span>zoom</span>
-            <input id="set-zoom" type="range" min="135" max="320" step="5" /></label>
+            <input id="set-zoom" type="range" min="90" max="145" step="1" /></label>
           <label class="set-toggle"><input id="set-mute" type="checkbox" /><span>mute everything</span></label>
           <label class="set-toggle"><input id="set-motion" type="checkbox" /><span>reduced motion</span></label>
           <p class="set-note">Reduced motion calms the camera and thins the particles. Nothing in the story is lost.</p>
@@ -440,7 +440,7 @@ export class UIManager {
       master.value = String(Math.round(settings.state.master * 100));
       music.value = String(Math.round(settings.state.music * 100));
       fx.value = String(Math.round(settings.state.effects * 100));
-      zoom.value = String(Math.round((settings.state.zoom ?? 2.2) * 100));
+      zoom.value = String(Math.round((settings.state.zoom ?? 1.08) * 100));
       mute.checked = settings.state.muted;
       motion.checked = settings.state.reducedMotion;
     };
